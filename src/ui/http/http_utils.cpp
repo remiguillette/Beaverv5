@@ -81,3 +81,35 @@ std::string url_decode(const std::string& str) {
     }
     return result;
 }
+
+std::map<std::string, std::string> parse_query_parameters(const std::string& query) {
+    std::map<std::string, std::string> parameters;
+    std::size_t start = 0;
+
+    while (start < query.size()) {
+        std::size_t separator = query.find('&', start);
+        if (separator == std::string::npos) {
+            separator = query.size();
+        }
+
+        std::size_t equal = query.find('=', start);
+        std::string key;
+        std::string value;
+
+        if (equal != std::string::npos && equal < separator) {
+            key = url_decode(query.substr(start, equal - start));
+            value = url_decode(query.substr(equal + 1, separator - equal - 1));
+        } else {
+            key = url_decode(query.substr(start, separator - start));
+            value = "";
+        }
+
+        if (!key.empty()) {
+            parameters[key] = value;
+        }
+
+        start = separator + 1;
+    }
+
+    return parameters;
+}
