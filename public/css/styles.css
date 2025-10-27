@@ -37,19 +37,15 @@ body {
 }
 
 .menu-root {
-  width: min(960px, 100%);
-  text-align: left;
-  margin: 0;
+  width: 100%;
+  max-width: 1200px; /* optionnel si tu veux garder une limite */
+  margin: 0 auto;
 }
 
 .menu-header {
+  justify-content: space-between; /* nouveau */
   width: 100%;
-  max-width: 100vw;
-  margin: 0;
-  margin-bottom: clamp(1.5rem, 4vw, 2.5rem);
-  padding: 1rem 0 0;
   display: flex;
-  flex-direction: row;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
