@@ -158,6 +158,17 @@ void HttpServerApp::handle_request(int client_socket) {
             response.headers["Content-Type"] = "text/css; charset=utf-8";
             response.headers["Cache-Control"] = "no-cache";
         }
+    } else if (request.path.rfind("/icons/", 0) == 0) {
+        std::string file_path = "public" + request.path;
+        response.body = read_file(file_path);
+        if (response.body.empty()) {
+            response.status_code = 404;
+            response.status_text = "Not Found";
+            response.body = "Icon not found";
+        } else {
+            response.headers["Content-Type"] = "image/svg+xml";
+            response.headers["Cache-Control"] = "public, max-age=86400";
+        }
     } else {
         response.status_code = 404;
         response.status_text = "Not Found";

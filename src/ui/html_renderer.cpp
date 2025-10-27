@@ -1,15 +1,14 @@
 #include "ui/html_renderer.h"
 
-#include <cctype>
 #include <sstream>
 
 std::string generate_app_tile_html(const AppTile& app) {
     std::ostringstream html;
-    char initial = app.name.empty() ? 'A' : toupper(app.name[0]);
 
     html << "<button type=\"button\" class=\"app-tile app-tile--" << app.accent << "\">\n";
     html << "  <div class=\"app-tile__icon\" aria-hidden=\"true\">\n";
-    html << "    <span class=\"app-tile__glyph\">" << initial << "</span>\n";
+    html << "    <img src=\"" << app.icon
+         << "\" alt=\"\" class=\"app-tile__icon-image\" loading=\"lazy\" />\n";
     html << "  </div>\n";
     html << "  <h3 class=\"app-tile__name\">" << app.name << "</h3>\n";
     html << "</button>\n";

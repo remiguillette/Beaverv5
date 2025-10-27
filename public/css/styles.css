@@ -138,18 +138,11 @@ body {
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
 }
 
-.app-tile__glyph {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 47px;
-  height: 47px;
-  border-radius: 16px;
-  font-size: 1.75rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  background: none;
-  color: var(--text-main);
+.app-tile__icon-image {
+  width: 48px;
+  height: 48px;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
 }
 
 .app-tile__name {
@@ -198,22 +191,3 @@ body {
   background: color-mix(in srgb, var(--accent-green) 35%, rgba(255, 255, 255, 0.04));
 }
 
-.app-tile--amber .app-tile__glyph {
-  color: var(--accent-amber);
-}
-
-.app-tile--violet .app-tile__glyph {
-  color: var(--accent-violet);
-}
-
-.app-tile--cyan .app-tile__glyph {
-  color: var(--accent-cyan);
-}
-
-.app-tile--red .app-tile__glyph {
-  color: var(--accent-red);
-}
-
-.app-tile--green .app-tile__glyph {
-  color: var(--accent-green);
-}
