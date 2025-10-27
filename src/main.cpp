@@ -1,94 +1,53 @@
-#include "../include/html_generator.h"
-#include <sstream>
-#include <cctype>
+#include <gtk/gtk.h>
+#include "../include/html_generator.h" // Include the header for HTML generation
+#include <iostream>                     // For basic output if needed
 
-std::vector<AppTile> get_sample_apps() {
-    return {
-        {"Code Editor", "violet", "Code"},
-        {"Terminal", "cyan", "Terminal"},
-        {"File Manager", "amber", "Folder"},
-        {"Web Browser", "red", "Globe"},
-        {"Settings", "green", "Settings"},
-        {"Music Player", "violet", "Music"},
-        {"Calculator", "amber", "Calculator"},
-        {"Calendar", "cyan", "Calendar"}
-    };
+// Activate function: Called when the GTK application starts
+static void activate (GtkApplication* app, gpointer user_data) {
+  GtkWidget *window;
+  GtkWidget *label; // Example widget
+
+  // Create the main application window
+  window = gtk_application_window_new (app);
+  gtk_window_set_title (GTK_WINDOW (window), "Beaver Kiosk");
+  gtk_window_set_default_size (GTK_WINDOW (window), 400, 300);
+
+  // --- Example Usage of HTML Generator ---
+  // You would typically use this HTML in a GtkWebView or serve it via HTTP.
+  // For now, let's just generate it and print a message.
+  std::vector<AppTile> apps = get_sample_apps();
+  std::string menu_html = generate_menu_page_html(apps);
+  std::string menu_json = generate_menu_json(apps);
+
+  // You could print the HTML/JSON to the console for verification:
+  // std::cout << "Generated HTML:\n" << menu_html << std::endl;
+  // std::cout << "\nGenerated JSON:\n" << menu_json << std::endl;
+
+  // Example: Add a simple label to the window
+  label = gtk_label_new ("GTK Window Initialized. Menu HTML/JSON generated (check console if uncommented).");
+  gtk_window_set_child(GTK_WINDOW(window), label); // Use gtk_window_set_child for GTK4
+
+  // Show the window
+  gtk_window_present(GTK_WINDOW(window));
 }
 
-std::string generate_app_tile_html(const AppTile& app) {
-    std::ostringstream html;
-    char initial = app.name.empty() ? 'A' : toupper(app.name[0]);
-    
-    html << "<button type=\"button\" class=\"app-tile app-tile--" << app.accent << "\">\n";
-    html << "  <div class=\"app-tile__icon\" aria-hidden=\"true\">\n";
-    html << "    <span style=\"font-size: 2.5rem; font-weight: 300;\">" << initial << "</span>\n";
-    html << "  </div>\n";
-    html << "  <h3 class=\"app-tile__name\">" << app.name << "</h3>\n";
-    html << "</button>\n";
-    
-    return html.str();
-}
+// Main function: Entry point of the application
+int main(int argc, char **argv) {
+  GtkApplication *app;
+  int status;
 
-std::string generate_menu_page_html(const std::vector<AppTile>& apps) {
-    std::ostringstream html;
-    
-    html << "<!DOCTYPE html>\n";
-    html << "<html lang=\"en\">\n";
-    html << "<head>\n";
-    html << "  <meta charset=\"UTF-8\" />\n";
-    html << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n";
-    html << "  <title>BeaverKiosk - C++ Edition</title>\n";
-    html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
-    html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
-    html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
-    html << "  <link rel=\"stylesheet\" href=\"/css/styles.css\" />\n";
-    html << "</head>\n";
-    html << "<body>\n";
-    html << "  <div id=\"root\">\n";
-    html << "    <div class=\"menu-root\">\n";
-    html << "      <header class=\"menu-header\">\n";
-    html << "        <h1>BeaverKiosk</h1>\n";
-    html << "        <p class=\"subtitle\">Unified application launcher • C++ Edition</p>\n";
-    html << "      </header>\n";
-    html << "      <main class=\"menu-grid\">\n";
-    
-    for (const auto& app : apps) {
-        html << "        " << generate_app_tile_html(app);
-    }
-    
-    html << "      </main>\n";
-    html << "      <footer class=\"menu-footer\">\n";
-    html << "        <small>C++ • Native HTTP Server • Beaver Suite ©2025</small>\n";
-    html << "      </footer>\n";
-    html << "    </div>\n";
-    html << "  </div>\n";
-    html << "</body>\n";
-    html << "</html>\n";
-    
-    return html.str();
-}
+  // Create a new GTK application instance
+  app = gtk_application_new ("org.example.beaverkiosk", G_APPLICATION_DEFAULT_FLAGS);
 
-std::string generate_menu_json(const std::vector<AppTile>& apps) {
-    std::ostringstream json;
-    
-    json << "{\n";
-    json << "  \"apps\": [\n";
-    
-    for (size_t i = 0; i < apps.size(); ++i) {
-        json << "    {\n";
-        json << "      \"name\": \"" << apps[i].name << "\",\n";
-        json << "      \"accent\": \"" << apps[i].accent << "\",\n";
-        json << "      \"icon\": \"" << apps[i].icon << "\"\n";
-        json << "    }";
-        
-        if (i < apps.size() - 1) {
-            json << ",";
-        }
-        json << "\n";
-    }
-    
-    json << "  ]\n";
-    json << "}\n";
-    
-    return json.str();
+  // Connect the "activate" signal to our activate function
+  g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+
+  // Run the application's main loop
+  status = g_application_run (G_APPLICATION (app), argc, argv);
+
+  // Clean up the application object
+  g_object_unref (app);
+
+  // Return the application's exit status
+  return status;
 }
