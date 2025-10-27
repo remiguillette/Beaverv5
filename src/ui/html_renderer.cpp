@@ -6,10 +6,10 @@
 std::string generate_app_tile_html(const AppTile& app) {
     std::ostringstream html;
     char initial = app.name.empty() ? 'A' : toupper(app.name[0]);
-    
+
     html << "<button type=\"button\" class=\"app-tile app-tile--" << app.accent << "\">\n";
     html << "  <div class=\"app-tile__icon\" aria-hidden=\"true\">\n";
-    html << "    <span style=\"font-size: 2.5rem; font-weight: 300;\">" << initial << "</span>\n";
+    html << "    <span class=\"app-tile__glyph\">" << initial << "</span>\n";
     html << "  </div>\n";
     html << "  <h3 class=\"app-tile__name\">" << app.name << "</h3>\n";
     html << "</button>\n";
@@ -35,8 +35,11 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps) {
     html << "  <div id=\"root\">\n";
     html << "    <div class=\"menu-root\">\n";
     html << "      <header class=\"menu-header\">\n";
-    html << "        <h1>BeaverKiosk</h1>\n";
-    html << "        <p class=\"subtitle\">Unified application launcher • C++ Edition</p>\n";
+    html << "        <h1 class=\"menu-header__title\">\n";
+    html << "          <span class=\"menu-header__welcome\">Welcome</span>\n";
+    html << "          <span class=\"menu-header__connector\">to the</span>\n";
+    html << "          <span class=\"menu-header__brand\">BeaverKiosk</span>\n";
+    html << "        </h1>\n";
     html << "      </header>\n";
     html << "      <main class=\"menu-grid\">\n";
     
@@ -45,9 +48,6 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps) {
     }
     
     html << "      </main>\n";
-    html << "      <footer class=\"menu-footer\">\n";
-    html << "        <small>C++ • Native HTTP Server • Beaver Suite ©2025</small>\n";
-    html << "      </footer>\n";
     html << "    </div>\n";
     html << "  </div>\n";
     html << "</body>\n";
