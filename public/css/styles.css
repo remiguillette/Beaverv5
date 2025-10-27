@@ -106,7 +106,7 @@ body {
   background: var(--card-bg);
   border: 2px solid transparent;
   border-radius: 16px;
-  padding: 3.8rem 1.5rem 1.5rem;
+  padding: 2rem 1.5rem 1.5rem;
   color: inherit;
   cursor: pointer;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
@@ -116,7 +116,7 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .app-tile:hover {
@@ -128,20 +128,13 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 95px;
-  height: 95px;
-  border-radius: 26px;
-  background: transparent;
-  backdrop-filter: blur(6px);
-  margin: -4.75rem auto 0;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+  margin: 0 auto;
 }
 
 .app-tile__icon-image {
   width: 48px;
   height: 48px;
   display: block;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
 }
 
 .app-tile__name {
@@ -170,23 +163,4 @@ body {
   border-color: var(--accent-green);
 }
 
-.app-tile--amber:hover .app-tile__icon {
-  background: color-mix(in srgb, var(--accent-amber) 35%, transparent);
-}
-
-.app-tile--violet:hover .app-tile__icon {
-  background: color-mix(in srgb, var(--accent-violet) 35%, transparent);
-}
-
-.app-tile--cyan:hover .app-tile__icon {
-  background: color-mix(in srgb, var(--accent-cyan) 35%, transparent);
-}
-
-.app-tile--red:hover .app-tile__icon {
-  background: color-mix(in srgb, var(--accent-red) 35%, transparent);
-}
-
-.app-tile--green:hover .app-tile__icon {
-  background: color-mix(in srgb, var(--accent-green) 35%, transparent);
-}
 
