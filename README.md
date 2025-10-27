@@ -1,230 +1,102 @@
-# BeaverKiosk - C++ Edition
+# BeaverKiosk – Native C++ Middleware Edition
 
-A complete web application written in pure C++ demonstrating how to convert a React-based web application into a native C++ HTTP server with server-side HTML generation.
+BeaverKiosk is now a single C++20 codebase that powers both a headless HTTP server and a native GTK 4 desktop experience. A lightweight **middleware layer** (`AppManager`) sits between the presentation layers and the underlying data so every user interface stays in sync without duplicating logic.
 
-## Overview
+## Highlights
 
-This project is a **complete conversion** of the React-based BeaverKiosk menu application into native C++. It demonstrates:
+- **Shared Core:** `AppManager` exposes the kiosk catalogue as structured data and can serialise it to HTML or JSON.
+- **HTTP Front-End:** A POSIX socket server serves HTML, JSON, and static assets using the middleware output.
+- **GTK 4 Front-End:** A modern desktop interface implemented with `GtkApplication`, `GtkFlowBox`, and CSS styling inspired by the web version.
+- **Clang-First Build:** The Makefile targets `clang++` by default and consumes the proper GTK 4 flags via `pkg-config`.
+- **Single Binary:** `./beaver_kiosk` selects the desired UI at runtime (`--http` or `--gtk`).
 
-- **Custom HTTP Server**: Built from scratch using POSIX sockets
-- **Server-Side HTML Generation**: Replaces React components with C++ functions
-- **RESTful API**: JSON endpoints for menu data
-- **Static File Serving**: CSS and other assets
-- **Zero JavaScript Required**: The client-side requires no JavaScript to function
-
-## React vs C++ Comparison
-
-### Original React Version
-- **Frontend**: React components with JSX
-- **Rendering**: Client-side with React DOM
-- **State Management**: React hooks (useState, useEffect)
-- **HTTP Requests**: Fetch API calls to backend
-- **Dependencies**: React, ReactDOM, Babel, Lucide icons
-- **Runtime**: Requires Node.js backend + browser JavaScript
-
-### C++ Version
-- **Backend**: Custom HTTP server using raw sockets
-- **Rendering**: Server-side HTML generation in C++
-- **State Management**: Static data structures in memory
-- **HTTP Requests**: Direct socket communication
-- **Dependencies**: Only C++ standard library + POSIX
-- **Runtime**: Single native binary, no JavaScript needed
-
-## Project Structure
+## Repository Layout
 
 ```
 ├── include/
-│   ├── html_generator.h    # HTML generation functions (replaces React components)
-│   └── http_utils.h        # HTTP parsing and response building
+│   ├── core/app_manager.h       # Middleware API shared by every UI layer
+│   └── ui/
+│       ├── gtk/gtk_app.h        # GTK window/controller declaration
+│       └── http/
+│           ├── http_server.h    # HTTP façade built on the middleware
+│           └── http_utils.h     # Request/response helpers
 ├── src/
-│   ├── html_generator.cpp  # Implementation of HTML generators
-│   ├── http_utils.cpp      # HTTP protocol implementation
-│   └── server.cpp          # Main server with socket programming
-├── public/
-│   └── css/
-│       └── styles.css      # Same CSS as React version
-├── build/                  # Compiled object files
-├── Makefile               # Build configuration
-└── beaver_kiosk           # Compiled executable
+│   ├── core/app_manager.cpp
+│   ├── main.cpp                 # Entry point + CLI for choosing the UI
+│   └── ui/
+│       ├── gtk/gtk_app.cpp
+│       └── http/
+│           ├── http_server.cpp
+│           └── http_utils.cpp
+├── public/css/styles.css        # Shared styling for the HTML UI
+├── docs/debian-local.md         # Debian focused setup guide
+└── Makefile                     # clang + GTK aware build instructions
 ```
 
-## Key Components
+## Building
 
-### 1. HTTP Server (src/server.cpp)
-The core HTTP server implementation using:
-- **POSIX Sockets**: Low-level network programming
-- **Request Handling**: Parse HTTP requests and route to handlers
-- **Response Building**: Generate proper HTTP responses
-- **Static File Serving**: Read and serve CSS files
+Install the prerequisites on Debian/Ubuntu:
 
-### 2. HTML Generator (src/html_generator.cpp)
-Replaces React components with C++ functions:
-- **`generate_app_tile_html()`**: Equivalent to React's `<AppTile>` component
-- **`generate_menu_page_html()`**: Equivalent to `<BeaverMenu>` component
-- **`generate_menu_json()`**: Generates JSON API responses
-
-### 3. HTTP Utilities (src/http_utils.cpp)
-HTTP protocol handling:
-- **Request Parsing**: Parse HTTP method, path, headers, body
-- **Response Building**: Create properly formatted HTTP responses
-- **MIME Type Detection**: Serve files with correct content types
-- **URL Decoding**: Handle URL-encoded strings
-
-## Conversion Process: React → C++
-
-### React Component → C++ Function
-
-**React (Original):**
-```jsx
-const AppTile = ({ name, icon: Icon, accent }) => {
-  return (
-    <button className={`app-tile app-tile--${accent}`}>
-      <div className="app-tile__icon">
-        <Icon size={42} />
-      </div>
-      <h3>{name}</h3>
-    </button>
-  );
-};
-```
-
-**C++ (Converted):**
-```cpp
-std::string generate_app_tile_html(const AppTile& app) {
-    std::ostringstream html;
-    html << "<button class=\"app-tile app-tile--" << app.accent << "\">\n";
-    html << "  <div class=\"app-tile__icon\">\n";
-    html << "    <span>" << app.name[0] << "</span>\n";
-    html << "  </div>\n";
-    html << "  <h3>" << app.name << "</h3>\n";
-    html << "</button>\n";
-    return html.str();
-}
-```
-
-### React Fetch → C++ Direct Response
-
-**React (Original):**
-```jsx
-const response = await fetch('/api/menu');
-const data = await response.json();
-setApps(mapRemoteApps(data));
-```
-
-**C++ (Converted):**
-```cpp
-if (request.path == "/api/menu") {
-    std::vector<AppTile> apps = get_sample_apps();
-    response.body = generate_menu_json(apps);
-    response.headers["Content-Type"] = "application/json";
-}
-```
-
-## Building and Running
-
-### Prerequisites
-- C++ compiler (clang++ or g++)
-- Make
-- POSIX-compliant system (Linux, macOS)
-
-### Build
 ```bash
-make clean  # Clean previous builds
-make        # Compile the project
+sudo apt update
+sudo apt install -y clang make pkg-config libgtk-4-dev
 ```
 
-### Run
-```bash
-./beaver_kiosk
-# or
-make run
-```
+Then compile the project:
 
-The server will start on `http://0.0.0.0:5000`
-
-### Clean Build
 ```bash
 make clean
+make
 ```
 
-## API Endpoints
+The Makefile automatically discovers every source file, applies the GTK 4 compiler flags from `pkg-config`, and links them into a single `beaver_kiosk` executable. Override the compiler if necessary:
 
-### `GET /`
-Returns the server-generated HTML page with all app tiles.
-
-**Response**: `text/html`
-
-### `GET /api/menu`
-Returns JSON data with all available applications.
-
-**Response**: `application/json`
-```json
-{
-  "apps": [
-    {
-      "name": "Code Editor",
-      "accent": "violet",
-      "icon": "Code"
-    },
-    ...
-  ]
-}
+```bash
+make CXX=/usr/bin/g++
 ```
 
-### `GET /css/styles.css`
-Serves the CSS stylesheet.
+More detailed platform notes live in [docs/debian-local.md](docs/debian-local.md).
 
-**Response**: `text/css`
+## Running
 
-## Technical Highlights
+The executable supports both runtimes through command-line flags:
 
-### 1. **No External Dependencies**
-- Pure C++ implementation
-- Only uses standard library and POSIX APIs
-- No heavy frameworks like Node.js or Express
+```bash
+./beaver_kiosk --http            # Start the HTTP server on port 5000
+./beaver_kiosk --http --port=8080
+./beaver_kiosk --gtk             # Launch the GTK 4 desktop UI
+```
 
-### 2. **Low Memory Footprint**
-- Compiled binary is very small
-- No runtime environment needed
-- Direct memory management in C++
+Use `./beaver_kiosk --help` to list all options. If no flag is provided the HTTP server is selected automatically.
 
-### 3. **High Performance**
-- Native code execution
-- No JavaScript interpretation
-- Direct socket communication
+## Middleware Flow
 
-### 4. **Educational Value**
-Demonstrates:
-- Socket programming in C++
-- HTTP protocol implementation
-- Server-side rendering
-- String manipulation and generation
-- File I/O operations
+```
+┌───────────────┐      ┌────────────────────┐
+│ HTTP Requests │ ---> │ HttpServerApp      │
+│ GTK Signals   │ ---> │ GtkApp             │
+└───────────────┘      └────────┬───────────┘
+                                 │
+                         ┌───────▼────────┐
+                         │ AppManager     │
+                         │  • get_available_apps()
+                         │  • to_html()
+                         │  • to_json()
+                         └───────────────┘
+```
 
-## Limitations Compared to React
+Both presentation layers consume the same `AppTile` data supplied by `AppManager`, ensuring a single source of truth. Adding another frontend (CLI, REST gateway, etc.) only requires plugging into the middleware.
 
-1. **No Real-time Updates**: The C++ version serves static HTML (no live updates without page refresh)
-2. **No Client Interaction**: React has onClick handlers; C++ version is display-only
-3. **No Icon Library**: Simplified to use text initials instead of icon libraries
-4. **No Client-Side Routing**: All navigation requires server round-trips
+## Styling & Accessibility
 
-## Future Enhancements
+- **GTK CSS Provider:** Recreates the kiosk look-and-feel with gradient backgrounds and accent colours per tile.
+- **Flowbox Layout:** Automatically wraps tiles while maintaining keyboard focus and pointer hover feedback.
+- **Web Output:** Continues to serve the existing `public/css/styles.css`, so browsers and GTK remain visually aligned.
 
-- Add WebSocket support for real-time updates
-- Implement template engine for better HTML management
-- Add multi-threading for concurrent request handling
-- Implement caching mechanisms
-- Add logging system
-- Support for actual app launching (process spawning)
+## Next Steps
 
-## License
+- Load kiosk tiles from an external JSON/YAML file rather than hard-coded data.
+- Add command dispatch so each tile can launch Debian desktop applications.
+- Extend the middleware with persistence or remote management APIs.
 
-This is a demonstration project for educational purposes.
-
-## Author
-
-Built with C++ to demonstrate native web server implementation and React-to-C++ conversion techniques.
-
----
-
-**BeaverKiosk C++ Edition** - Proving that you don't always need JavaScript! 🦫
+Enjoy the new middleware-driven BeaverKiosk! 🦫
