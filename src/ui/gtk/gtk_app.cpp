@@ -40,11 +40,19 @@ void GtkApp::build_ui(GtkApplication* application) {
     gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 
     GtkWidget* webview = webkit_web_view_new();
+#if GTK_MAJOR_VERSION >= 4
     gtk_window_set_child(GTK_WINDOW(window), webview);
+#else
+    gtk_container_add(GTK_CONTAINER(window), webview);
+#endif
 
     std::string html = manager_.to_html();
     std::string base_uri = build_base_uri();
     webkit_web_view_load_html(WEBKIT_WEB_VIEW(webview), html.c_str(), base_uri.c_str());
 
+#if GTK_MAJOR_VERSION >= 4
     gtk_window_present(GTK_WINDOW(window));
+#else
+    gtk_widget_show_all(window);
+#endif
 }

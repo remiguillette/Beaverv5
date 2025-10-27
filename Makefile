@@ -1,19 +1,20 @@
-CXX := clang++
+CXX := $(shell command -v clang++ || command -v g++)
+ifeq ($(CXX),)
+$(error No suitable C++ compiler found (clang++ or g++))
+endif
 CXXFLAGS := -std=c++20 -Wall -Wextra -O2 -I./include
 
-GTK_CFLAGS := $(shell pkg-config --cflags gtk4 2>/dev/null)
-GTK_LIBS := $(shell pkg-config --libs gtk4 2>/dev/null)
-
-WEBKIT_CFLAGS := $(shell pkg-config --cflags webkit2gtk-4.1 2>/dev/null)
-WEBKIT_LIBS := $(shell pkg-config --libs webkit2gtk-4.1 2>/dev/null)
-
-ifeq ($(WEBKIT_CFLAGS),)
-WEBKIT_CFLAGS := $(shell pkg-config --cflags webkit2gtk-4.0 2>/dev/null)
-WEBKIT_LIBS := $(shell pkg-config --libs webkit2gtk-4.0 2>/dev/null)
+WEBKIT_PKG := $(shell pkg-config --exists webkit2gtk-4.1 && echo webkit2gtk-4.1)
+ifeq ($(WEBKIT_PKG),)
+WEBKIT_PKG := $(shell pkg-config --exists webkit2gtk-4.0 && echo webkit2gtk-4.0)
 endif
 
-CXXFLAGS += $(GTK_CFLAGS) $(WEBKIT_CFLAGS)
-LDFLAGS += $(GTK_LIBS) $(WEBKIT_LIBS)
+ifeq ($(WEBKIT_PKG),)
+$(warning WebKitGTK development package not found. Build will likely fail when compiling UI sources.)
+else
+CXXFLAGS += $(shell pkg-config --cflags $(WEBKIT_PKG))
+LDFLAGS += $(shell pkg-config --libs $(WEBKIT_PKG))
+endif
 
 TARGET := beaver_kiosk
 SRC_DIR := src
