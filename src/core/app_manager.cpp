@@ -6,13 +6,13 @@
 
 AppManager::AppManager()
     : apps_({
-          {"BeaverPhone", "violet", "Phone"},
-          {"BeaverSystem", "cyan", "Settings"},
-          {"BeaverAlarm", "amber", "Alarm"},
-          {"BeaverTask", "red", "ClipboardCheck"},
-          {"BeaverDoc", "green", "FileText"},
-          {"BeaverDebian", "violet", "Linux"},
-          {"BeaverNet", "amber", "Globe"}}) {}
+          {"BeaverPhone", "violet", "icons/phone.svg"},
+          {"BeaverSystem", "cyan", "icons/server.svg"},
+          {"BeaverAlarm", "amber", "icons/shield-alert.svg"},
+          {"BeaverTask", "red", "icons/square-check-big.svg"},
+          {"BeaverDoc", "green", "icons/file-text.svg"},
+          {"BeaverDebian", "violet", "icons/server-cog.svg"},
+          {"BeaverNet", "amber", "icons/chromium.svg"}}) {}
 
 const std::vector<AppTile>& AppManager::get_available_apps() const {
     return apps_;
