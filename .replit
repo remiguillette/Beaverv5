@@ -1,0 +1,3 @@
+modules = ["cpp-clang14"]
+[agent]
+expertMode = true
