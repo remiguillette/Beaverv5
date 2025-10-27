@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <utility>
 
 #include <webkit2/webkit2.h>
 
@@ -167,21 +168,20 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
-    std::string html = manager_.to_html(language);
-    load_html(web_view, html);
+    load_html(web_view, manager_.to_html(language));
 }
 
 void GtkApp::load_beaverphone(WebKitWebView* web_view, Language language) {
-    std::string html = manager_.beaverphone_page_html(language);
-    load_html(web_view, html);
+    load_html(web_view, manager_.beaverphone_page_html(language));
 }
 
-void GtkApp::load_html(WebKitWebView* web_view, const std::string& html) {
+void GtkApp::load_html(WebKitWebView* web_view, std::string html) {
     if (base_uri_.empty()) {
         base_path_ = resolve_public_directory();
         base_uri_ = build_base_uri(base_path_);
     }
-    webkit_web_view_load_html(web_view, html.c_str(), base_uri_.c_str());
+    current_document_html_ = std::move(html);
+    webkit_web_view_load_html(web_view, current_document_html_.c_str(), base_uri_.c_str());
 }
 
 std::string GtkApp::normalize_path(const std::string& raw_path) const {

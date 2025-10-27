@@ -20,10 +20,11 @@ private:
     void build_ui(GtkApplication* application);
     void load_language(WebKitWebView* web_view, Language language);
     void load_beaverphone(WebKitWebView* web_view, Language language);
-    void load_html(WebKitWebView* web_view, const std::string& html);
+    void load_html(WebKitWebView* web_view, std::string html);
     std::string normalize_path(const std::string& raw_path) const;
 
     AppManager& manager_;
     std::string base_uri_;
     std::filesystem::path base_path_;
+    std::string current_document_html_;
 };
