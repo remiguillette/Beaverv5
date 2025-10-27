@@ -14,10 +14,10 @@ constexpr char kTextDomain[] = "beaverkiosk";
 const char* locale_for_language(Language language) {
     switch (language) {
         case Language::French:
-            return "fr_FR.UTF-8";
+            return "fr";
         case Language::English:
         default:
-            return "en_US.UTF-8";
+            return "en";
     }
 }
 
