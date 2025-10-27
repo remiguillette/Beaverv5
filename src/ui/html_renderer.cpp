@@ -68,13 +68,6 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     html << "  <div id=\"root\">\n";
     html << "    <div class=\"menu-root\">\n";
     html << "      <header class=\"menu-header\">\n";
-    html << "        <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" << language_label
-         << "\">\n";
-    html << language_toggle_button("FR", "?lang=fr", switch_to_french,
-                                   language == Language::French);
-    html << language_toggle_button("EN", "?lang=en", switch_to_english,
-                                   language == Language::English);
-    html << "        </nav>\n";
     html << "        <h1 class=\"menu-header__title\">\n";
     html << "          <span class=\"menu-header__welcome\">"
          << translations.translate("Welcome", language) << "</span>\n";
@@ -83,6 +76,13 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     html << "          <span class=\"menu-header__brand\">"
          << translations.translate("BeaverKiosk", language) << "</span>\n";
     html << "        </h1>\n";
+    html << "        <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" << language_label
+         << "\">\n";
+    html << language_toggle_button("FR", "?lang=fr", switch_to_french,
+                                   language == Language::French);
+    html << language_toggle_button("EN", "?lang=en", switch_to_english,
+                                   language == Language::English);
+    html << "        </nav>\n";
     html << "      </header>\n";
     html << "      <main class=\"menu-grid\">\n";
 
