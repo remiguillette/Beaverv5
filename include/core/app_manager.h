@@ -3,15 +3,13 @@
 #include <string>
 #include <vector>
 
+#include "core/language.h"
+#include "core/translation_catalog.h"
+
 struct AppTile {
     std::string name;
     std::string accent;
     std::string icon;
-};
-
-enum class Language {
-    French,
-    English,
 };
 
 class AppManager {
@@ -31,4 +29,5 @@ public:
 private:
     std::vector<AppTile> apps_;
     Language default_language_;
+    TranslationCatalog translation_catalog_;
 };
