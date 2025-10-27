@@ -5,11 +5,15 @@
 #include "../include/html_generator.h"
 
 namespace {
+    // your code here
+} // namespace
 
 const char kAppCss[] = R"css(
 window {
   background: #111827;
 }
+)css";
+
 
 .root {
   padding: 32px;
