@@ -51,6 +51,7 @@ void GtkApp::build_ui(GtkApplication* application) {
 #endif
 
     base_uri_ = build_base_uri();
+    base_path_ = std::filesystem::current_path() / "public";
     load_language(WEBKIT_WEB_VIEW(webview), manager_.get_default_language());
 
 #if GTK_MAJOR_VERSION >= 4
@@ -94,9 +95,7 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         path = uri_string;
     }
 
-    if (path.empty()) {
-        path = "/";
-    }
+    path = self->normalize_path(path);
 
     const std::size_t query_position = path.find('?');
     if (query_position != std::string::npos) {
@@ -175,6 +174,41 @@ void GtkApp::load_beaverphone(WebKitWebView* web_view, Language language) {
 void GtkApp::load_html(WebKitWebView* web_view, const std::string& html) {
     if (base_uri_.empty()) {
         base_uri_ = build_base_uri();
+        if (base_path_.empty()) {
+            base_path_ = std::filesystem::current_path() / "public";
+        }
     }
     webkit_web_view_load_html(web_view, html.c_str(), base_uri_.c_str());
+}
+
+std::string GtkApp::normalize_path(const std::string& raw_path) const {
+    if (raw_path.empty()) {
+        return "/";
+    }
+
+    if (raw_path == "/") {
+        return raw_path;
+    }
+
+    if (!base_path_.empty()) {
+        const std::string base = base_path_.generic_string();
+        if (!base.empty()) {
+            const std::string base_with_slash = base + "/";
+            if (raw_path.rfind(base_with_slash, 0) == 0) {
+                std::string remainder = raw_path.substr(base_with_slash.size());
+                if (remainder.empty()) {
+                    return "/";
+                }
+                if (remainder.front() != '/') {
+                    remainder.insert(remainder.begin(), '/');
+                }
+                return remainder;
+            }
+            if (raw_path == base) {
+                return "/";
+            }
+        }
+    }
+
+    return raw_path;
 }
