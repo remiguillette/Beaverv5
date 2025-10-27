@@ -1,12 +1,12 @@
-CXX = clang++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -I./include
-LDFLAGS = 
+CXX ?= g++
+PKG_CONFIG ?= pkg-config
+CXXFLAGS ?= -O2 -pipe
+CXXFLAGS += -std=c++20 -Wall -Wextra -Wpedantic $(shell $(PKG_CONFIG) --cflags gtk4)
+LDFLAGS += $(shell $(PKG_CONFIG) --libs gtk4)
 
 TARGET = beaver_kiosk
 SRC_DIR = src
-INC_DIR = include
 OBJ_DIR = build
-
 SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
@@ -16,7 +16,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	@echo "Linking $(TARGET)..."
-	$(CXX) $(OBJECTS) -o $(TARGET) $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
 	@echo "Build complete!"
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
