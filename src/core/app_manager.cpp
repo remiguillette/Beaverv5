@@ -63,9 +63,10 @@ public:
 private:
     static void apply_language(Language language) {
         const char* candidates[] = {
-            locale_for_language(language),
-            language == Language::French ? "fr_FR" : "en_US",
-            language == Language::French ? "fr" : "en",
+            language == Language::French ? "fr_FR.UTF-8" : "en_US.UTF-8",
+            language == Language::French ? "fr_FR.utf8"  : "en_US.utf8",
+            language == Language::French ? "fr_FR"       : "en_US",
+            language == Language::French ? "fr"          : "en",
             "C",
         };
 
@@ -75,13 +76,14 @@ private:
             }
         }
 
-        setenv("LANGUAGE", language_env(language), 1);
+        setenv("LANGUAGE", language == Language::French ? "fr" : "en", 1);
     }
 
     std::string previous_locale_;
     std::string previous_language_env_;
     bool had_language_env_ = false;
 };
+
 }  // namespace
 
 AppManager::AppManager()
