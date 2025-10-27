@@ -50,6 +50,7 @@ void GtkApp::build_ui(GtkApplication* application) {
     gtk_container_add(GTK_CONTAINER(window), webview);
 #endif
 
+    base_uri_ = build_base_uri();
     load_language(WEBKIT_WEB_VIEW(webview), manager_.get_default_language());
 
 #if GTK_MAJOR_VERSION >= 4
@@ -80,15 +81,38 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     }
 
     std::string uri_string(uri);
-    const std::size_t query_position = uri_string.find('?');
-    if (query_position == std::string::npos) {
-        return FALSE;
+    std::string path;
+    std::string query;
+
+    const std::size_t scheme_position = uri_string.find("://");
+    if (scheme_position != std::string::npos) {
+        const std::size_t path_start = uri_string.find('/', scheme_position + 3);
+        if (path_start != std::string::npos) {
+            path = uri_string.substr(path_start);
+        }
+    } else if (!uri_string.empty() && uri_string.front() == '/') {
+        path = uri_string;
     }
 
-    std::string query = uri_string.substr(query_position + 1);
+    if (path.empty()) {
+        path = "/";
+    }
+
+    const std::size_t query_position = path.find('?');
+    if (query_position != std::string::npos) {
+        query = path.substr(query_position + 1);
+        path = path.substr(0, query_position);
+    }
+
+    if (path == "/index.html") {
+        path = "/";
+    }
+
     std::stringstream query_stream(query);
     std::string parameter;
-    std::string language_value;
+
+    Language language = self->manager_.get_default_language();
+    bool language_changed = false;
 
     while (std::getline(query_stream, parameter, '&')) {
         const std::size_t separator_position = parameter.find('=');
@@ -105,37 +129,52 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
             std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
                 return static_cast<char>(std::tolower(ch));
             });
-            language_value = std::move(value);
-            break;
+            if (value == "en") {
+                language = Language::English;
+                language_changed = true;
+            } else if (value == "fr") {
+                language = Language::French;
+                language_changed = true;
+            }
         }
     }
 
-    if (language_value.empty()) {
-        return FALSE;
-    }
-
-    Language language = self->manager_.get_default_language();
     bool handled = false;
-    if (language_value == "en") {
-        language = Language::English;
+    if (path == "/" || path.empty()) {
+        if (language_changed) {
+            self->manager_.set_default_language(language);
+        }
+        self->load_language(web_view, language);
         handled = true;
-    } else if (language_value == "fr") {
-        language = Language::French;
+    } else if (path == "/apps/beaverphone") {
+        if (language_changed) {
+            self->manager_.set_default_language(language);
+        }
+        self->load_beaverphone(web_view, language);
         handled = true;
     }
 
-    if (!handled) {
-        return FALSE;
+    if (handled) {
+        webkit_policy_decision_ignore(decision);
+        return TRUE;
     }
 
-    self->manager_.set_default_language(language);
-    self->load_language(web_view, language);
-    webkit_policy_decision_ignore(decision);
-    return TRUE;
+    return FALSE;
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
     std::string html = manager_.to_html(language);
-    std::string base_uri = build_base_uri();
-    webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+    load_html(web_view, html);
+}
+
+void GtkApp::load_beaverphone(WebKitWebView* web_view, Language language) {
+    std::string html = manager_.beaverphone_page_html(language);
+    load_html(web_view, html);
+}
+
+void GtkApp::load_html(WebKitWebView* web_view, const std::string& html) {
+    if (base_uri_.empty()) {
+        base_uri_ = build_base_uri();
+    }
+    webkit_web_view_load_html(web_view, html.c_str(), base_uri_.c_str());
 }

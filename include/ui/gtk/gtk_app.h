@@ -3,6 +3,8 @@
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
 
+#include <string>
+
 #include "core/app_manager.h"
 
 class GtkApp {
@@ -16,6 +18,9 @@ private:
                                      WebKitPolicyDecisionType decision_type, gpointer user_data);
     void build_ui(GtkApplication* application);
     void load_language(WebKitWebView* web_view, Language language);
+    void load_beaverphone(WebKitWebView* web_view, Language language);
+    void load_html(WebKitWebView* web_view, const std::string& html);
 
     AppManager& manager_;
+    std::string base_uri_;
 };
