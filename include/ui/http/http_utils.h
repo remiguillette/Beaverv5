@@ -1,8 +1,7 @@
-#ifndef HTTP_UTILS_H
-#define HTTP_UTILS_H
+#pragma once
 
-#include <string>
 #include <map>
+#include <string>
 #include <sstream>
 
 struct HttpRequest {
@@ -27,5 +26,3 @@ HttpRequest parse_http_request(const std::string& raw_request);
 std::string build_http_response(const HttpResponse& response);
 std::string get_mime_type(const std::string& path);
 std::string url_decode(const std::string& str);
-
-#endif

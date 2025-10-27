@@ -32,8 +32,12 @@ Thumbs.db
 *.pdb
 
 # Core dumps
-core
-core.*
+/core
+/core.*
+
+# Allow middleware headers
+!include/core/
+!include/core/**
 
 # Replit
 .replit

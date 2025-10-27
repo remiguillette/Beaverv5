@@ -1,19 +1,7 @@
-#include "../include/html_generator.h"
-#include <sstream>
-#include <cctype>
+#include "ui/html_renderer.h"
 
-std::vector<AppTile> get_sample_apps() {
-    return {
-        {"Code Editor", "violet", "Code"},
-        {"Terminal", "cyan", "Terminal"},
-        {"File Manager", "amber", "Folder"},
-        {"Web Browser", "red", "Globe"},
-        {"Settings", "green", "Settings"},
-        {"Music Player", "violet", "Music"},
-        {"Calculator", "amber", "Calculator"},
-        {"Calendar", "cyan", "Calendar"}
-    };
-}
+#include <cctype>
+#include <sstream>
 
 std::string generate_app_tile_html(const AppTile& app) {
     std::ostringstream html;
@@ -66,29 +54,4 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps) {
     html << "</html>\n";
     
     return html.str();
-}
-
-std::string generate_menu_json(const std::vector<AppTile>& apps) {
-    std::ostringstream json;
-    
-    json << "{\n";
-    json << "  \"apps\": [\n";
-    
-    for (size_t i = 0; i < apps.size(); ++i) {
-        json << "    {\n";
-        json << "      \"name\": \"" << apps[i].name << "\",\n";
-        json << "      \"accent\": \"" << apps[i].accent << "\",\n";
-        json << "      \"icon\": \"" << apps[i].icon << "\"\n";
-        json << "    }";
-        
-        if (i < apps.size() - 1) {
-            json << ",";
-        }
-        json << "\n";
-    }
-    
-    json << "  ]\n";
-    json << "}\n";
-    
-    return json.str();
 }
