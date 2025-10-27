@@ -8,46 +8,55 @@ namespace {
 
 const char kAppCss[] = R"css(
 window {
-  background: #111827;
+  background-image: radial-gradient(circle at 20% 20%, #1f2937, #0b1120 70%);
+  background-color: #0f172a;
+  color: #f9fafb;
+  font-family: "Inter", "Cantarell", "Segoe UI", sans-serif;
 }
 
 .root {
   padding: 32px;
-  spacing: 24px;
+  background-color: transparent;
+}
+
+.menu-root {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .menu-header {
-  spacing: 4px;
+  padding-bottom: 16px;
 }
 
 .menu-header-title {
   font-size: 32px;
   font-weight: 600;
   color: #f9fafb;
+  margin-bottom: 6px;
 }
 
 .menu-header-subtitle {
   font-size: 14px;
-  color: rgba(229, 231, 235, 0.75);
+  color: rgba(229, 231, 235, 0.7);
 }
 
 .menu-grid {
-  row-spacing: 16px;
-  column-spacing: 16px;
+  padding-top: 8px;
 }
 
 .app-tile {
-  background: rgba(255, 255, 255, 0.04);
+  background-color: rgba(17, 24, 39, 0.85);
+  border: 2px solid rgba(255, 255, 255, 0.04);
   border-radius: 20px;
   padding: 18px 16px 16px 16px;
   min-width: 160px;
   min-height: 140px;
-  border: 2px solid transparent;
-  transition: 150ms ease;
+  color: inherit;
 }
 
 .app-tile:hover {
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .app-tile__icon {
@@ -58,7 +67,7 @@ window {
 
 .app-tile__name {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .app-tile__icon,
@@ -66,40 +75,36 @@ window {
   color: inherit;
 }
 
-.accent-violet {
-  background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(129,140,248,0.22));
-  color: #ede9fe;
+.app-tile--violet {
+  background-image: linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(129, 140, 248, 0.2));
 }
 
-.accent-cyan {
-  background: linear-gradient(135deg, rgba(6,182,212,0.18), rgba(34,211,238,0.22));
-  color: #cffafe;
+.app-tile--cyan {
+  background-image: linear-gradient(135deg, rgba(6, 182, 212, 0.16), rgba(34, 211, 238, 0.2));
 }
 
-.accent-amber {
-  background: linear-gradient(135deg, rgba(217,119,6,0.22), rgba(251,191,36,0.22));
-  color: #fef3c7;
+.app-tile--amber {
+  background-image: linear-gradient(135deg, rgba(217, 119, 6, 0.18), rgba(251, 191, 36, 0.2));
 }
 
-.accent-red {
-  background: linear-gradient(135deg, rgba(239,68,68,0.22), rgba(248,113,113,0.22));
-  color: #fee2e2;
+.app-tile--red {
+  background-image: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(248, 113, 113, 0.2));
 }
 
-.accent-green {
-  background: linear-gradient(135deg, rgba(34,197,94,0.22), rgba(74,222,128,0.22));
-  color: #dcfce7;
+.app-tile--green {
+  background-image: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(74, 222, 128, 0.2));
 }
 
 .menu-footer {
   font-size: 12px;
-  color: rgba(229, 231, 235, 0.6);
+  color: rgba(229, 231, 235, 0.55);
+  margin-top: 24px;
 }
 )css";
 
 void attach_css() {
   GtkCssProvider *provider = gtk_css_provider_new();
-  gtk_css_provider_load_from_data(provider, kAppCss, -1);
+  gtk_css_provider_load_from_string(provider, kAppCss);
 
   if (GdkDisplay *display = gdk_display_get_default(); display != nullptr) {
     gtk_style_context_add_provider_for_display(
@@ -114,7 +119,7 @@ GtkWidget *create_app_tile(const AppTile &app) {
   GtkWidget *button = gtk_button_new();
   gtk_widget_add_css_class(button, "app-tile");
 
-  std::string accent_class = "accent-" + app.accent;
+  std::string accent_class = "app-tile--" + app.accent;
   gtk_widget_add_css_class(button, accent_class.c_str());
 
   GtkWidget *content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -147,10 +152,13 @@ GtkWidget *build_menu_grid(const std::vector<AppTile> &apps) {
   GtkWidget *flow = gtk_flow_box_new();
   gtk_widget_add_css_class(flow, "menu-grid");
   gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(flow), GTK_SELECTION_NONE);
-  gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flow), 16);
-  gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flow), 16);
+  gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flow), 20);
+  gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flow), 20);
+  gtk_flow_box_set_min_children_per_line(GTK_FLOW_BOX(flow), 3);
+  gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flow), 4);
   gtk_widget_set_hexpand(flow, TRUE);
   gtk_widget_set_vexpand(flow, TRUE);
+  gtk_widget_set_halign(flow, GTK_ALIGN_CENTER);
 
   for (const auto &app : apps) {
     GtkWidget *tile = create_app_tile(app);
@@ -172,22 +180,25 @@ static void activate(GtkApplication *app, gpointer /*user_data*/) {
 
   GtkWidget *root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 24);
   gtk_widget_add_css_class(root, "root");
+  gtk_widget_add_css_class(root, "menu-root");
   gtk_widget_set_margin_top(root, 24);
   gtk_widget_set_margin_bottom(root, 24);
   gtk_widget_set_margin_start(root, 32);
   gtk_widget_set_margin_end(root, 32);
+  gtk_widget_set_halign(root, GTK_ALIGN_CENTER);
 
-  GtkWidget *header = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+  GtkWidget *header = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
   gtk_widget_add_css_class(header, "menu-header");
+  gtk_widget_set_halign(header, GTK_ALIGN_CENTER);
 
   GtkWidget *title = gtk_label_new("BeaverKiosk");
   gtk_widget_add_css_class(title, "menu-header-title");
-  gtk_label_set_xalign(GTK_LABEL(title), 0.0);
+  gtk_label_set_xalign(GTK_LABEL(title), 0.5);
 
   GtkWidget *subtitle = gtk_label_new(
-      "Unified application launcher • Native GTK edition");
+      "Unified application launcher • C++ Edition");
   gtk_widget_add_css_class(subtitle, "menu-header-subtitle");
-  gtk_label_set_xalign(GTK_LABEL(subtitle), 0.0);
+  gtk_label_set_xalign(GTK_LABEL(subtitle), 0.5);
 
   gtk_box_append(GTK_BOX(header), title);
   gtk_box_append(GTK_BOX(header), subtitle);
@@ -196,9 +207,10 @@ static void activate(GtkApplication *app, gpointer /*user_data*/) {
   GtkWidget *grid = build_menu_grid(apps);
 
   GtkWidget *footer = gtk_label_new(
-      "C++ • GTK4 • Beaver Suite ©2025");
+      "C++ • Native HTTP Server • Beaver Suite ©2025");
   gtk_widget_add_css_class(footer, "menu-footer");
-  gtk_label_set_xalign(GTK_LABEL(footer), 0.0);
+  gtk_label_set_xalign(GTK_LABEL(footer), 0.5);
+  gtk_widget_set_halign(footer, GTK_ALIGN_CENTER);
 
   gtk_box_append(GTK_BOX(root), header);
   gtk_box_append(GTK_BOX(root), grid);
