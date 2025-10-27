@@ -20,7 +20,7 @@ TARGET := beaver_kiosk
 SRC_DIR := src
 OBJ_DIR := build
 
-LDFLAGS += -lintl
+LDFLAGS += 
 
 SOURCES := $(shell find $(SRC_DIR) -name '*.cpp')
 OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SOURCES))
