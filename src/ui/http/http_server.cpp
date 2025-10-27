@@ -1,10 +1,12 @@
 #include "ui/http/http_server.h"
 
 #include <arpa/inet.h>
+#include <algorithm>
 #include <csignal>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <cctype>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -140,15 +142,43 @@ void HttpServerApp::handle_request(int client_socket) {
 
     HttpResponse response;
 
-    if (request.path == "/" || request.path == "/index.html") {
-        response.body = manager_.to_html();
+    std::string path = request.path;
+    std::map<std::string, std::string> query_parameters;
+    const std::size_t query_start = path.find('?');
+    if (query_start != std::string::npos) {
+        query_parameters = parse_query_parameters(path.substr(query_start + 1));
+        path = path.substr(0, query_start);
+    }
+
+    if (path.empty()) {
+        path = "/";
+    }
+
+    Language language = manager_.get_default_language();
+    auto lang_it = query_parameters.find("lang");
+    if (lang_it != query_parameters.end()) {
+        std::string value = lang_it->second;
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        if (value == "en") {
+            language = Language::English;
+        } else if (value == "fr") {
+            language = Language::French;
+        }
+    }
+
+    if (path == "/" || path == "/index.html") {
+        response.body = manager_.to_html(language);
         response.headers["Content-Type"] = "text/html; charset=utf-8";
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-    } else if (request.path == "/api/menu") {
-        response.body = manager_.to_json();
+        response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
+    } else if (path == "/api/menu") {
+        response.body = manager_.to_json(language);
         response.headers["Content-Type"] = "application/json; charset=utf-8";
         response.headers["Access-Control-Allow-Origin"] = "*";
-    } else if (request.path == "/css/styles.css") {
+        response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
+    } else if (path == "/css/styles.css") {
         response.body = read_file("public/css/styles.css");
         if (response.body.empty()) {
             response.status_code = 404;

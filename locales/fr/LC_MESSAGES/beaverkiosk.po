@@ -1,0 +1,52 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: BeaverKiosk\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: Beaver Team <support@example.com>\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Welcome"
+msgstr "Bienvenue"
+
+msgid "to the"
+msgstr "dans le"
+
+msgid "BeaverKiosk"
+msgstr "BeaverKiosk"
+
+msgid "Language selection"
+msgstr "Sélection de la langue"
+
+msgid "Switch to French"
+msgstr "Passer en français"
+
+msgid "Switch to English"
+msgstr "Passer en anglais"
+
+msgid "BeaverPhone"
+msgstr "Téléphone Beaver"
+
+msgid "BeaverSystem"
+msgstr "Système Beaver"
+
+msgid "BeaverAlarm"
+msgstr "Alarme Beaver"
+
+msgid "BeaverTask"
+msgstr "Tâches Beaver"
+
+msgid "BeaverDoc"
+msgstr "Documents Beaver"
+
+msgid "BeaverDebian"
+msgstr "Beaver Debian"
+
+msgid "BeaverNet"
+msgstr "Réseau Beaver"
