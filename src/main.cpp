@@ -2,18 +2,14 @@
 #include <string>
 #include <vector>
 
-#include "../include/html_generator.h"
+#include "html_generator.h"
 
 namespace {
-    // your code here
-} // namespace
 
 const char kAppCss[] = R"css(
 window {
   background: #111827;
 }
-)css";
-
 
 .root {
   padding: 32px;
@@ -99,7 +95,7 @@ window {
   font-size: 12px;
   color: rgba(229, 231, 235, 0.6);
 }
-"css;
+)css";
 
 void attach_css() {
   GtkCssProvider *provider = gtk_css_provider_new();
@@ -214,20 +210,18 @@ static void activate(GtkApplication *app, gpointer /*user_data*/) {
 
 // Main function: Entry point of the application
 int main(int argc, char **argv) {
-  GtkApplication *app;
-  int status;
-
   // Create a new GTK application instance
-  app = gtk_application_new ("org.example.beaverkiosk", G_APPLICATION_DEFAULT_FLAGS);
+  GtkApplication *app =
+      gtk_application_new("org.example.beaverkiosk", G_APPLICATION_DEFAULT_FLAGS);
 
   // Connect the "activate" signal to our activate function
-  g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+  g_signal_connect(app, "activate", G_CALLBACK(activate), nullptr);
 
   // Run the application's main loop
-  status = g_application_run (G_APPLICATION (app), argc, argv);
+  int status = g_application_run(G_APPLICATION(app), argc, argv);
 
   // Clean up the application object
-  g_object_unref (app);
+  g_object_unref(app);
 
   // Return the application's exit status
   return status;
