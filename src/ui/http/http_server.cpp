@@ -173,6 +173,11 @@ void HttpServerApp::handle_request(int client_socket) {
         response.headers["Content-Type"] = "text/html; charset=utf-8";
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
         response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
+    } else if (path == "/apps/beaverphone") {
+        response.body = manager_.beaverphone_page_html(language);
+        response.headers["Content-Type"] = "text/html; charset=utf-8";
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+        response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
     } else if (path == "/api/menu") {
         response.body = manager_.to_json(language);
         response.headers["Content-Type"] = "application/json; charset=utf-8";

@@ -11,3 +11,5 @@ std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog&
                                    Language language);
 std::string generate_menu_page_html(const std::vector<AppTile>& apps,
                                     const TranslationCatalog& translations, Language language);
+std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translations,
+                                              Language language);
