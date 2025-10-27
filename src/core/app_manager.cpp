@@ -12,7 +12,7 @@ AppManager::AppManager()
           {"BeaverTask", "red", "ClipboardCheck"},
           {"BeaverDoc", "green", "FileText"},
           {"BeaverDebian", "violet", "Linux"},
-          {"BeaverNet (open in GTK) (https://rgbeavernet.ca/)", "cyan", "Globe"}}) {}
+          {"BeaverNet", "amber", "Globe"}}) {}
 
 const std::vector<AppTile>& AppManager::get_available_apps() const {
     return apps_;
