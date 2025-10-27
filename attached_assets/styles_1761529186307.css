@@ -1,0 +1,133 @@
+:root {
+  color-scheme: dark;
+  --accent-amber: #f89422;
+  --accent-violet: #9d6cff;
+  --accent-cyan: #22d3ee;
+  --accent-red: #ff6b6b;
+  --accent-green: #47d17b;
+  --bg: radial-gradient(circle at top, #1d1d2f, #09090f 70%);
+  --card-bg: rgba(24, 24, 32, 0.9);
+  --text-main: #f2f2f7;
+  --text-muted: #b1b1c7;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3rem 1.5rem;
+}
+
+#root {
+  width: min(960px, 100%);
+}
+
+.loading-state,
+.noscript-warning {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.menu-root {
+  max-width: 960px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.menu-header h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  margin: 0 0 0.3rem;
+}
+
+.subtitle {
+  margin: 0 0 2rem;
+  color: var(--text-muted);
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.2rem;
+}
+
+.menu-status {
+  grid-column: 1 / -1;
+  padding: 1.25rem;
+  border-radius: 16px;
+  background: rgba(24, 24, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.menu-status__hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.app-tile {
+  background: var(--card-bg);
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 1.2rem;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.app-tile:hover {
+  transform: translateY(-4px);
+}
+
+.app-tile__icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.app-tile__name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.app-tile--amber:hover {
+  border-color: var(--accent-amber);
+}
+
+.app-tile--violet:hover {
+  border-color: var(--accent-violet);
+}
+
+.app-tile--cyan:hover {
+  border-color: var(--accent-cyan);
+}
+
+.app-tile--red:hover {
+  border-color: var(--accent-red);
+}
+
+.app-tile--green:hover {
+  border-color: var(--accent-green);
+}
+
+.menu-footer {
+  margin-top: 2rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
