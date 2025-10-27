@@ -40,6 +40,43 @@ std::filesystem::path resolve_public_directory() {
 std::string build_base_uri(const std::filesystem::path& public_dir) {
     return resource_paths::file_uri_from_path(public_dir);
 }
+
+const char* language_code(Language language) {
+    switch (language) {
+        case Language::French:
+            return "fr";
+        case Language::English:
+        default:
+            return "en";
+    }
+}
+
+std::string fallback_document_html(const std::string& title, const std::string& message) {
+    std::ostringstream html;
+    html << "<!DOCTYPE html>\n";
+    html << "<html lang=\"en\">\n";
+    html << "<head>\n";
+    html << "  <meta charset=\"UTF-8\" />\n";
+    html << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n";
+    html << "  <title>" << title << "</title>\n";
+    html << "  <style>\n";
+    html << "    body { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\n";
+    html << "           background: #f5f6fa; color: #1b2430; margin: 0; padding: 48px; }\n";
+    html << "    .fallback-card { max-width: 560px; margin: 0 auto; background: #ffffff; padding: 32px;\n";
+    html << "                      border-radius: 18px; box-shadow: 0 18px 45px rgba(31, 41, 55, 0.12); }\n";
+    html << "    .fallback-card h1 { margin-top: 0; font-size: 28px; font-weight: 600; }\n";
+    html << "    .fallback-card p { margin: 16px 0 0; line-height: 1.5; font-size: 16px; }\n";
+    html << "  </style>\n";
+    html << "</head>\n";
+    html << "<body>\n";
+    html << "  <div class=\"fallback-card\">\n";
+    html << "    <h1>" << title << "</h1>\n";
+    html << "    <p>" << message << "</p>\n";
+    html << "  </div>\n";
+    html << "</body>\n";
+    html << "</html>\n";
+    return html.str();
+}
 }  // namespace
 
 void GtkApp::build_ui(GtkApplication* application) {
@@ -168,11 +205,25 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
-    load_html(web_view, manager_.to_html(language));
+    std::string html = manager_.to_html(language);
+    if (html.empty()) {
+        g_warning("AppManager returned empty menu HTML for language '%s' in GTK mode; using fallback content.",
+                  language_code(language));
+        html = fallback_document_html("BeaverKiosk", "The kiosk menu is temporarily unavailable in this mode."
+                                                   " Try restarting the application or launching the HTTP server.");
+    }
+    load_html(web_view, std::move(html));
 }
 
 void GtkApp::load_beaverphone(WebKitWebView* web_view, Language language) {
-    load_html(web_view, manager_.beaverphone_page_html(language));
+    std::string html = manager_.beaverphone_page_html(language);
+    if (html.empty()) {
+        g_warning("AppManager returned empty BeaverPhone HTML for language '%s' in GTK mode; using fallback content.",
+                  language_code(language));
+        html = fallback_document_html("BeaverPhone", "The BeaverPhone dial pad failed to load."
+                                                    " Please relaunch BeaverKiosk or use the HTTP interface.");
+    }
+    load_html(web_view, std::move(html));
 }
 
 void GtkApp::load_html(WebKitWebView* web_view, std::string html) {
