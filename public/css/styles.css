@@ -38,7 +38,6 @@ body {
 
 .menu-root {
   width: 100%;
-  max-width: 1200px; /* optionnel si tu veux garder une limite */
   margin: 0 auto;
 }
 
