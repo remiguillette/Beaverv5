@@ -10,6 +10,7 @@ struct AppTile {
     std::string name;
     std::string accent;
     std::string icon;
+    std::string route;
 };
 
 class AppManager {
@@ -25,6 +26,8 @@ public:
     std::string to_json(Language language) const;
     std::string to_html() const;
     std::string to_html(Language language) const;
+    std::string beaverphone_page_html() const;
+    std::string beaverphone_page_html(Language language) const;
 
 private:
     std::vector<AppTile> apps_;

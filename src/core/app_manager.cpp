@@ -15,13 +15,13 @@ std::string locale_directory() {
 
 AppManager::AppManager()
     : apps_({
-          {"BeaverPhone", "violet", "icons/phone.svg"},
-          {"BeaverSystem", "cyan", "icons/server.svg"},
-          {"BeaverAlarm", "amber", "icons/shield-alert.svg"},
-          {"BeaverTask", "red", "icons/square-check-big.svg"},
-          {"BeaverDoc", "green", "icons/file-text.svg"},
-          {"BeaverDebian", "violet", "icons/server-cog.svg"},
-          {"BeaverNet", "amber", "icons/chromium.svg"}}),
+          {"BeaverPhone", "violet", "icons/phone.svg", "/apps/beaverphone"},
+          {"BeaverSystem", "cyan", "icons/server.svg", ""},
+          {"BeaverAlarm", "amber", "icons/shield-alert.svg", ""},
+          {"BeaverTask", "red", "icons/square-check-big.svg", ""},
+          {"BeaverDoc", "green", "icons/file-text.svg", ""},
+          {"BeaverDebian", "violet", "icons/server-cog.svg", ""},
+          {"BeaverNet", "amber", "icons/chromium.svg", ""}}),
       default_language_(Language::French),
       translation_catalog_(locale_directory()) {}
 
@@ -72,4 +72,12 @@ std::string AppManager::to_json(Language language) const {
 
 std::string AppManager::to_html(Language language) const {
     return generate_menu_page_html(apps_, translation_catalog_, language);
+}
+
+std::string AppManager::beaverphone_page_html() const {
+    return beaverphone_page_html(default_language_);
+}
+
+std::string AppManager::beaverphone_page_html(Language language) const {
+    return generate_beaverphone_dialpad_html(translation_catalog_, language);
 }
