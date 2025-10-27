@@ -38,7 +38,6 @@ body {
 
 .menu-root {
   width: min(960px, 100%);
-  padding: 2rem 0 0;
   text-align: left;
   margin: 0;
 }
