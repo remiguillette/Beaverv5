@@ -1,0 +1,13 @@
+Welcome=Welcome
+to the=to the
+BeaverKiosk=BeaverKiosk
+Language selection=Language selection
+Switch to French=Switch to French
+Switch to English=Switch to English
+BeaverPhone=BeaverPhone
+BeaverSystem=BeaverSystem
+BeaverAlarm=BeaverAlarm
+BeaverTask=BeaverTask
+BeaverDoc=BeaverDoc
+BeaverDebian=BeaverDebian
+BeaverNet=BeaverNet

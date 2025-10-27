@@ -1,7 +1,8 @@
 #include "ui/html_renderer.h"
 
-#include <libintl.h>
 #include <sstream>
+
+#include "core/translation_catalog.h"
 
 namespace {
 const char* html_lang_code(Language language) {
@@ -14,8 +15,8 @@ const char* html_lang_code(Language language) {
     }
 }
 
-std::string language_toggle_button(const char* label, const char* href, const char* aria_label,
-                                   bool active) {
+std::string language_toggle_button(const std::string& label, const std::string& href,
+                                   const std::string& aria_label, bool active) {
     std::ostringstream html;
     html << "          <a href=\"" << href << "\" class=\"lang-toggle__button";
     if (active) {
@@ -27,7 +28,8 @@ std::string language_toggle_button(const char* label, const char* href, const ch
 }
 }  // namespace
 
-std::string generate_app_tile_html(const AppTile& app) {
+std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog& translations,
+                                   Language language) {
     std::ostringstream html;
 
     html << "<button type=\"button\" class=\"app-tile app-tile--" << app.accent << "\">\n";
@@ -35,19 +37,21 @@ std::string generate_app_tile_html(const AppTile& app) {
     html << "    <img src=\"" << app.icon
          << "\" alt=\"\" class=\"app-tile__icon-image\" loading=\"lazy\" />\n";
     html << "  </div>\n";
-    html << "  <h3 class=\"app-tile__name\">" << gettext(app.name.c_str()) << "</h3>\n";
+    html << "  <h3 class=\"app-tile__name\">"
+         << translations.translate(app.name, language) << "</h3>\n";
     html << "</button>\n";
 
     return html.str();
 }
 
-std::string generate_menu_page_html(const std::vector<AppTile>& apps, Language language) {
+std::string generate_menu_page_html(const std::vector<AppTile>& apps,
+                                    const TranslationCatalog& translations, Language language) {
     std::ostringstream html;
 
     const char* lang_code = html_lang_code(language);
-    const std::string language_label = gettext("Language selection");
-    const std::string switch_to_french = gettext("Switch to French");
-    const std::string switch_to_english = gettext("Switch to English");
+    const std::string language_label = translations.translate("Language selection", language);
+    const std::string switch_to_french = translations.translate("Switch to French", language);
+    const std::string switch_to_english = translations.translate("Switch to English", language);
 
     html << "<!DOCTYPE html>\n";
     html << "<html lang=\"" << lang_code << "\">\n";
@@ -66,22 +70,24 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps, Language l
     html << "      <header class=\"menu-header\">\n";
     html << "        <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" << language_label
          << "\">\n";
-    html << language_toggle_button("FR", "?lang=fr", switch_to_french.c_str(),
+    html << language_toggle_button("FR", "?lang=fr", switch_to_french,
                                    language == Language::French);
-    html << language_toggle_button("EN", "?lang=en", switch_to_english.c_str(),
+    html << language_toggle_button("EN", "?lang=en", switch_to_english,
                                    language == Language::English);
     html << "        </nav>\n";
     html << "        <h1 class=\"menu-header__title\">\n";
-    html << "          <span class=\"menu-header__welcome\">" << gettext("Welcome") << "</span>\n";
-    html << "          <span class=\"menu-header__connector\">" << gettext("to the")
-         << "</span>\n";
-    html << "          <span class=\"menu-header__brand\">" << gettext("BeaverKiosk") << "</span>\n";
+    html << "          <span class=\"menu-header__welcome\">"
+         << translations.translate("Welcome", language) << "</span>\n";
+    html << "          <span class=\"menu-header__connector\">"
+         << translations.translate("to the", language) << "</span>\n";
+    html << "          <span class=\"menu-header__brand\">"
+         << translations.translate("BeaverKiosk", language) << "</span>\n";
     html << "        </h1>\n";
     html << "      </header>\n";
     html << "      <main class=\"menu-grid\">\n";
 
     for (const auto& app : apps) {
-        html << "        " << generate_app_tile_html(app);
+        html << "        " << generate_app_tile_html(app, translations, language);
     }
     
     html << "      </main>\n";

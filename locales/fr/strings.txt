@@ -1,0 +1,13 @@
+Welcome=Bienvenue
+to the=dans le
+BeaverKiosk=BeaverKiosk
+Language selection=Sélection de la langue
+Switch to French=Passer en français
+Switch to English=Passer en anglais
+BeaverPhone=Téléphone Beaver
+BeaverSystem=Système Beaver
+BeaverAlarm=Alarme Beaver
+BeaverTask=Tâches Beaver
+BeaverDoc=Documents Beaver
+BeaverDebian=Beaver Debian
+BeaverNet=Réseau Beaver
