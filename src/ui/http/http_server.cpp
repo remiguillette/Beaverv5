@@ -1,9 +1,12 @@
 #include "ui/http/http_server.h"
 
+#include "core/resource_paths.h"
+
 #include <arpa/inet.h>
 #include <algorithm>
 #include <csignal>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <cctype>
@@ -17,7 +20,8 @@ HttpServerApp::HttpServerApp(AppManager& manager, int port)
     : manager_(manager),
       port_(port),
       server_socket_(-1),
-      running_(false) {}
+      running_(false),
+      public_directory_(resource_paths::public_directory()) {}
 
 HttpServerApp::~HttpServerApp() {
     stop();
@@ -117,8 +121,8 @@ void HttpServerApp::stop() {
     }
 }
 
-std::string HttpServerApp::read_file(const std::string& filepath) const {
-    std::ifstream file(filepath);
+std::string HttpServerApp::read_file(const std::filesystem::path& filepath) const {
+    std::ifstream file(filepath, std::ios::binary);
     if (!file.is_open()) {
         return {};
     }
@@ -184,7 +188,7 @@ void HttpServerApp::handle_request(int client_socket) {
         response.headers["Access-Control-Allow-Origin"] = "*";
         response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
     } else if (path == "/css/styles.css") {
-        response.body = read_file("public/css/styles.css");
+        response.body = read_file(public_directory_ / "css" / "styles.css");
         if (response.body.empty()) {
             response.status_code = 404;
             response.status_text = "Not Found";
@@ -194,7 +198,7 @@ void HttpServerApp::handle_request(int client_socket) {
             response.headers["Cache-Control"] = "no-cache";
         }
     } else if (request.path.rfind("/icons/", 0) == 0) {
-        std::string file_path = "public" + request.path;
+        std::filesystem::path file_path = public_directory_ / request.path.substr(1);
         response.body = read_file(file_path);
         if (response.body.empty()) {
             response.status_code = 404;

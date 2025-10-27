@@ -3,12 +3,12 @@
 #include <filesystem>
 #include <sstream>
 
+#include "core/resource_paths.h"
 #include "ui/html_renderer.h"
 
 namespace {
 std::string locale_directory() {
-    namespace fs = std::filesystem;
-    return (fs::current_path() / "locales").string();
+    return resource_paths::locales_directory().string();
 }
 
 }  // namespace

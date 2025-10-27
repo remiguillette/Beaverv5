@@ -5,8 +5,11 @@
 #include <filesystem>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 #include <webkit2/webkit2.h>
+
+#include "core/resource_paths.h"
 
 GtkApp::GtkApp(AppManager& manager) : manager_(manager) {}
 
@@ -25,14 +28,16 @@ void GtkApp::on_activate(GtkApplication* application, gpointer user_data) {
 }
 
 namespace {
-std::string build_base_uri() {
+std::filesystem::path resolve_public_directory() {
     namespace fs = std::filesystem;
-    fs::path public_dir = fs::current_path() / "public";
-    std::string uri = "file://" + public_dir.string();
-    if (!uri.empty() && uri.back() != '/') {
-        uri.push_back('/');
-    }
-    return uri;
+    fs::path public_dir = resource_paths::public_directory();
+    std::error_code ec;
+    fs::path canonical = fs::weakly_canonical(public_dir, ec);
+    return ec ? public_dir : canonical;
+}
+
+std::string build_base_uri(const std::filesystem::path& public_dir) {
+    return resource_paths::file_uri_from_path(public_dir);
 }
 }  // namespace
 
@@ -50,8 +55,8 @@ void GtkApp::build_ui(GtkApplication* application) {
     gtk_container_add(GTK_CONTAINER(window), webview);
 #endif
 
-    base_uri_ = build_base_uri();
-    base_path_ = std::filesystem::current_path() / "public";
+    base_path_ = resolve_public_directory();
+    base_uri_ = build_base_uri(base_path_);
     load_language(WEBKIT_WEB_VIEW(webview), manager_.get_default_language());
 
 #if GTK_MAJOR_VERSION >= 4
@@ -173,10 +178,8 @@ void GtkApp::load_beaverphone(WebKitWebView* web_view, Language language) {
 
 void GtkApp::load_html(WebKitWebView* web_view, const std::string& html) {
     if (base_uri_.empty()) {
-        base_uri_ = build_base_uri();
-        if (base_path_.empty()) {
-            base_path_ = std::filesystem::current_path() / "public";
-        }
+        base_path_ = resolve_public_directory();
+        base_uri_ = build_base_uri(base_path_);
     }
     webkit_web_view_load_html(web_view, html.c_str(), base_uri_.c_str());
 }
