@@ -202,6 +202,15 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         uri, navigation_type_to_string(navigation_type), is_user_gesture ? "true" : "false",
         mouse_button, modifiers);
 
+    // When we call webkit_web_view_load_html the web view performs an internal
+    // navigation to the provided base URI. Those navigations are reported with
+    // type "other" and without a user gesture. If we intercept them we end up
+    // recursively loading the same page forever. Let WebKit handle them
+    // normally.
+    if (!is_user_gesture && navigation_type == WEBKIT_NAVIGATION_TYPE_OTHER) {
+        return FALSE;
+    }
+
     GUri* parsed_uri = g_uri_parse(uri, G_URI_FLAGS_NONE, nullptr);
     if (parsed_uri == nullptr) {
         return FALSE;
