@@ -415,7 +415,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
             }
           : null;
         const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const wsHost = window.location.hostname || 'ws://192.168.1.60';
+        const wsHost = window.location.hostname || '192.168.1.60';
         const wsUrl = `${wsScheme}://${wsHost}:5001`;
         console.info('[BeaverPhone] WebSocket endpoint:', wsUrl);
         const reconnectDelayMs = 5000;
