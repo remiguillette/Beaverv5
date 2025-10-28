@@ -91,7 +91,7 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
     html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
     html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
-    html << "  <link rel=\"stylesheet\" href=\"/css/styles.css\" />\n";
+    html << "  <link rel=\"stylesheet\" href=\"css/styles.css\" />\n";
     html << "</head>\n";
     html << "<body>\n";
     html << "  <div id=\"root\">\n";
@@ -156,7 +156,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
     html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
     html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
-    html << "  <link rel=\"stylesheet\" href=\"/css/styles.css\" />\n";
+    html << "  <link rel=\"stylesheet\" href=\"css/styles.css\" />\n";
     html << "</head>\n";
     html << "<body>\n";
     html << "  <div id=\"root\">\n";
