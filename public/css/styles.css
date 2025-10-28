@@ -65,6 +65,23 @@ body {
 
 .system-header .lang-toggle {
   margin-left: auto;
+  background: rgba(248, 148, 34, 0.14);
+  border-color: rgba(248, 148, 34, 0.4);
+  box-shadow: 0 0 0 1px rgba(248, 148, 34, 0.18);
+}
+
+.system-header .lang-toggle__button {
+  color: rgba(248, 148, 34, 0.75);
+}
+
+.system-header .lang-toggle__button:hover {
+  color: var(--accent-amber);
+}
+
+.system-header .lang-toggle__button--active {
+  background: rgba(248, 148, 34, 0.24);
+  color: var(--text-main);
+  box-shadow: 0 0 0 1px rgba(248, 148, 34, 0.45);
 }
 
 .menu-header > .lang-toggle {
@@ -633,6 +650,7 @@ body {
   letter-spacing: -0.01em;
   flex: 1 1 260px;
   min-width: 0;
+  color: var(--accent-amber);
 }
 
 .system-dashboard {
@@ -663,7 +681,7 @@ body {
   font-size: 0.95rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: rgba(248, 148, 34, 0.85);
 }
 
 .system-section__meta {
@@ -695,7 +713,7 @@ body {
   font-size: 0.9rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: rgba(248, 148, 34, 0.75);
 }
 
 .system-card__metrics {
@@ -735,13 +753,12 @@ body {
   font-weight: 600;
   color: var(--text-main);
   min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .system-card__value--wrap {
   word-break: break-word;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .status-indicator {
@@ -798,8 +815,8 @@ body {
   justify-content: center;
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
-  background: rgba(34, 211, 238, 0.18);
-  color: #5be5f5;
+  background: rgba(248, 148, 34, 0.2);
+  color: var(--accent-amber);
   font-weight: 600;
   font-size: 0.9rem;
 }
