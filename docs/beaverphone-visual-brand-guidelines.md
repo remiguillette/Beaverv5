@@ -1,71 +1,219 @@
-# BeaverPhone Visual & Brand Guidelines
+Brand & Graphic Guidelines
 
-## Overview
-BeaverPhone delivers a premium kiosk-style dialing experience within the BeaverKiosk suite. These guidelines summarize the existing product design so designers, engineers, and marketers can produce assets that feel native to BeaverPhone.
+This document outlines the brand identity and graphic standards for the application, as derived from its core CSS stylesheet.
 
-## Core Brand Attributes
-- **Confident and dependable:** Interface cues emphasise reliability with sturdy blocks, soft glows, and consistent accent usage.
-- **Technologically warm:** The amber accent pairs with deep-space neutrals to keep the app inviting yet professional.
-- **Operational clarity:** Copy favors short, direct labels ("Call", "Clear") and concise helper text that supports fast task completion.
+The brand's aesthetic is modern, tech-focused, and built on a "dark mode" first paradigm. The UI is clean, legible, and uses a strong primary accent color for key interactions, balanced by a set of secondary colors for categorical differentiation.
 
-## Logo & Wordmark
-- **Product name:** Always set as “BeaverPhone” (camel-case, capital B and P). Avoid abbreviations like "BPhone" in external materials.
-- **Typography treatment:** Use the primary type stack at medium/semibold weights, matching the in-product header styling.
-- **Coloring:** Prefer the accent amber (`#f89422`). When placing over dark backgrounds use pure accent; over light backgrounds add a subtle drop shadow or 1px outline in `rgba(0,0,0,0.35)` to preserve legibility.
+1. Color Palette
 
-## Color Palette
-| Usage | Token | Hex | Notes |
-| --- | --- | --- | --- |
-| Primary accent | `--accent-amber` | `#f89422` | Buttons, dividers, emphasis lines. 【F:public/css/styles.css†L1-L74】【F:public/css/styles.css†L240-L336】
-| Secondary accent | `--accent-violet` | `#9d6cff` | Secondary tiles, optional highlights. 【F:public/css/styles.css†L1-L74】
-| Support accent | `--accent-cyan` | `#22d3ee` | Network or status callouts. 【F:public/css/styles.css†L1-L74】
-| Support accent | `--accent-red` | `#ff6b6b` | Error states, destructive actions. 【F:public/css/styles.css†L1-L74】
-| Support accent | `--accent-green` | `#47d17b` | Positive confirmations, connection OK. 【F:public/css/styles.css†L1-L74】
-| Base background | `--bg` | `#10111a` | Full-page background. 【F:public/css/styles.css†L1-L49】
-| Surface / cards | `--card-bg` | `#181820` | Dialpad, card backgrounds. 【F:public/css/styles.css†L1-L49】【F:public/css/styles.css†L240-L336】
-| Text primary | `--text-main` | `#f1f2f8` | Body text, dial digits. 【F:public/css/styles.css†L1-L49】【F:public/css/styles.css†L240-L336】
-| Text muted | `--text-muted` | `#a8a8bf` | Secondary labels, dialpad letters. 【F:public/css/styles.css†L1-L74】【F:public/css/styles.css†L240-L336】
+The color system is foundational to the brand. It consists of a core dark theme, a single powerful primary accent, and a palette of secondary accents.
 
-### Gradients & Glows
-- Accent glow for the call button: apply drop shadow `0 8px 20px rgba(255, 122, 24, 0.3)` (hover: `0 12px 28px rgba(255, 122, 24, 0.35)`). 【F:public/css/styles.css†L312-L408】
-- Connection indicator dot colors progress from `#ffba6b` (idle) to `#61d836` (connected). 【F:public/css/styles.css†L312-L432】【F:public/css/styles.css†L480-L520】
+Core Palette (Dark Theme)
 
-## Typography
-- **Primary font stack:** `'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif` with letter spacing adjustments for headings. 【F:public/css/styles.css†L1-L49】【F:public/css/styles.css†L240-L336】
-- **Headings:** Uppercase micro-headings use 0.08–0.18em tracking and amber coloring (e.g., dialpad title at 1.1rem). 【F:public/css/styles.css†L240-L384】
-- **Body copy:** 0.9–1rem regular text with neutral color for readability.
-- **Numbers:** Dialpad digits at 1.6rem, display at 1.75rem semibold. Maintain fixed-width alignment for clarity. 【F:public/css/styles.css†L312-L384】
+This is the default theme for the entire application.
 
-## Iconography & Imagery
-- **Dial Icon:** Inline SVG sized 26×26 inside the call button. Keep stroke simplified and filled with `currentColor`. 【F:public/css/styles.css†L312-L408】【F:src/ui/html_renderer.cpp†L320-L388】
-- **Extension avatars:** Use 42×42 circles. Prefer imagery with transparent backgrounds; otherwise show single-letter initials centered in amber-backed circle. 【F:public/css/styles.css†L408-L480】
-- **Status Indicators:** Use pill-shaped badges with subtle borders and the surface highlight background. 【F:public/css/styles.css†L312-L432】
+Variable
 
-## Layout Principles
-- **Structure:** Two-column responsive grid—dialpad card and extension list—collapses via `auto-fit` minmax at 260px. Maintain 2rem gutter. 【F:public/css/styles.css†L240-L384】
-- **Card styling:** Rounded 20px corners, 1px borders in `var(--surface-outline)` with top border accent strip `rgba(248, 148, 34, 0.6)` for hero cards. 【F:public/css/styles.css†L240-L384】
-- **Spacing:** Use 1–2rem interior padding on primary surfaces; 0.75–1rem gaps within clusters.
-- **Language toggle:** Displayed as pill switch anchored to header right, using translucent amber background and 13px font. 【F:public/css/styles.css†L48-L144】【F:src/ui/html_renderer.cpp†L300-L332】
+Hex/RGBA
 
-## Interaction Guidance
-- **Hover states:** Surfaces shift border color or glow; keep transitions ~0.2s and avoid heavy motion out of respect for reduced-motion preferences. 【F:public/css/styles.css†L48-L384】【F:public/css/styles.css†L480-L520】
-- **Focus states:** Outline inputs and primary actions with `rgba(255, 186, 107, 0.8)` and `outline-offset: 2px`. 【F:public/css/styles.css†L312-L408】
-- **Disabled states:** Reduce opacity to ~0.55 without altering layout. 【F:public/css/styles.css†L312-L408】
+Usage
 
-## Voice & Messaging
-- **Tone:** Friendly but concise. System messages like connection status should use present-tense statements ("Not connected", "Connection in progress"). 【F:src/ui/html_renderer.cpp†L300-L352】
-- **Language support:** Ensure all copy is localized for English (`?lang=en`) and French (`?lang=fr`). Route toggles must update label attributes for accessibility. 【F:src/ui/html_renderer.cpp†L300-L352】
+--bg
 
-## Accessibility
-- Maintain contrast ratios above WCAG AA: amber accent on dark surfaces already exceeds 4.5:1, but verify for any new colors.
-- Aria attributes: keep `aria-live="polite"` on the dialpad display and connection indicator for assistive tech parity. 【F:src/ui/html_renderer.cpp†L320-L388】
-- Buttons should remain at least 44px square; current dialpad buttons meet this size. 【F:public/css/styles.css†L312-L384】
+#10111a
 
-## Asset Production Checklist
-1. Apply the primary accent for call-to-action elements.
-2. Use rounded rectangles (14–20px radius) for containers.
-3. Keep icons monochrome when embedded in accent pills to leverage `currentColor`.
-4. Provide both English and French text layers for exported marketing visuals.
-5. Test dark-mode legibility at 50% screen brightness to mirror kiosk lighting.
+The main, darkest background for the application body.
 
-Following these guidelines will ensure new graphics and communications extend BeaverPhone’s established design language.
+--card-bg
+
+#181820
+
+The primary background color for all cards, sections, and modules.
+
+--text-main
+
+#f1f2f8
+
+The default text color for all body copy, titles, and content.
+
+--text-muted
+
+#a8a8bf
+
+For secondary text, hints, labels, and disabled-state text.
+
+--surface-outline
+
+rgba(255, 255, 255, 0.08)
+
+The default border color for cards, buttons, and dividers.
+
+--surface-highlight
+
+rgba(255, 255, 255, 0.06)
+
+Subtle backgrounds for elements like displays, and for hover states.
+
+Accent Palette
+
+This palette brings life and interactivity to the UI.
+
+Variable
+
+Hex
+
+Usage
+
+--accent-amber
+
+#f89422
+
+Primary Brand Color. Used for all key interactive elements, CTAs, links, page titles, and section headers.
+
+--accent-violet
+
+#9d6cff
+
+Secondary accent. Used for categorical hovers (e.g., App Tiles).
+
+--accent-cyan
+
+#22d3ee
+
+Secondary accent. Used for categorical hovers (e.g., App Tiles).
+
+--accent-red
+
+#ff6b6b
+
+Secondary accent. Used for categorical hovers or potential error/danger states.
+
+--accent-green
+
+#47d17b
+
+Secondary accent. Used for categorical hovers or success states.
+
+Status Indicators
+
+The brand uses a specific, accessible system for status indicators.
+
+Status
+
+Background Color
+
+Text Color
+
+OK / Success
+
+rgba(71, 209, 123, 0.16)
+
+#4fe18f
+
+Warning
+
+rgba(248, 148, 34, 0.18)
+
+#fbb36b
+
+Idle / Neutral
+
+rgba(168, 168, 191, 0.16)
+
+var(--text-muted)
+
+2. Typography
+
+Typography is clean, modern, and prioritizes legibility by using a system-native font stack.
+
+Font Family: 'Segoe UI', 'Helvetica Neue', Arial, system-ui, sans-serif
+
+Key Styles & Weights
+
+Semi-Bold (600): This is the default weight for most UI elements, including titles, button text, card names, and dialpad keys. This creates a strong, confident feel.
+
+Normal (400-500): Used for body copy, descriptions, and labels.
+
+Bold (700): Used sparingly, such as for avatar initials.
+
+Common Text Components
+
+Page Titles (.menu-header__title, .system-header__title):
+
+Large, responsive font size (using clamp()).
+
+Weight: 600.
+
+Color: Often var(--accent-amber).
+
+Section Titles (.system-section__title, .dialpad-title):
+
+Style: UPPERCASE
+
+Weight: 600 (implied or explicit)
+
+Tracking: letter-spacing is applied (e.g., 0.12em)
+
+Color: var(--accent-amber) or a slightly muted version.
+
+Muted Text (.menu-status__hint, .dialpad-key__letters):
+
+Smaller font size.
+
+Color: var(--text-muted).
+
+3. Layout & Graphic Guide
+
+The application's graphical language is based on cards, rounded corners, and clear separation.
+
+Cards & Containers
+
+Background: All cards use var(--card-bg).
+
+Border: A standard 1px solid var(--surface-outline) is the default.
+
+Border Radius: Corners are consistently and generously rounded. The standard is 16px or 20px.
+
+Shadows: Subtle shadows (box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);) are applied to key modules like .dialpad-card to create depth.
+
+Highlight Border: A key visual motif is the use of a 2px top border using the primary accent color (border-top: 2px solid rgba(248, 148, 34, 0.6);). This is seen on .dialpad-card, .system-section, and .system-card.
+
+Buttons & Interactive Elements
+
+Primary CTA (.dialpad-call-button):
+
+Shape: Fully rounded pill (border-radius: 999px).
+
+Fill: Solid var(--accent-amber).
+
+Text: High-contrast dark text (#2f1900).
+
+Effect: A strong, colored shadow (0 8px 20px rgba(255, 122, 24, 0.3)).
+
+Secondary Actions (.dialpad-action, .phone-back-link):
+
+Shape: Rounded (14px) or fully-rounded pill (999px).
+
+Fill: var(--surface-highlight).
+
+Border: 1px solid var(--surface-outline).
+
+Text: var(--text-main).
+
+Hover: Background and border become slightly lighter.
+
+Toggles (.lang-toggle):
+
+Shape: Pill container (border-radius: 16px).
+
+Fill: A transparent, tinted background of the primary accent (rgba(248, 148, 34, 0.14)).
+
+Active State: The active button receives a stronger tinted background (rgba(248, 148, 34, 0.24)) and var(--text-main) text color.
+
+App Tiles (.app-tile):
+
+Shape: Rounded card (border-radius: 16px).
+
+State: A transparent 2px border.
+
+Hover State: The border becomes visible using one of the secondary accent colors (e.g., border-color: var(--accent-violet);).
