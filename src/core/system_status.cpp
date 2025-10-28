@@ -79,8 +79,12 @@ std::string format_uptime(double seconds) {
     return formatted.str();
 }
 
-std::string format_iso_timestamp(std::chrono::system_clock::time_point time_point) {
-    std::time_t time = std::chrono::system_clock::to_time_t(time_point);
+template <typename Duration>
+std::string format_iso_timestamp(
+    std::chrono::time_point<std::chrono::system_clock, Duration> time_point) {
+    const auto system_time_point =
+        std::chrono::time_point_cast<std::chrono::system_clock::duration>(time_point);
+    std::time_t time = std::chrono::system_clock::to_time_t(system_time_point);
     std::tm tm{};
 #if defined(_WIN32)
     localtime_s(&tm, &time);
