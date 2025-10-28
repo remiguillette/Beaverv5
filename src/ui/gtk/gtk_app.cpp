@@ -214,14 +214,6 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     const guint mouse_button = webkit_navigation_action_get_mouse_button(action);
     const guint modifiers = webkit_navigation_action_get_modifiers(action);
 
-    g_message("GtkApp navigation action received:");
-    g_message("    \342\206\222 URI: %s", uri);
-    g_message("    \342\206\222 Type: %s (%d)", navigation_type_to_string(navigation_type),
-              static_cast<int>(navigation_type));
-    g_message("    \342\206\222 User gesture: %s", is_user_gesture ? "true" : "false");
-    g_message("    \342\206\222 Mouse button: %u", mouse_button);
-    g_message("    \342\206\222 Modifiers: 0x%x", modifiers);
-
     // When we call webkit_web_view_load_html the web view performs an internal
     // navigation to the provided base URI. Those navigations are reported with
     // type "other" and without a user gesture. If we intercept them we end up
