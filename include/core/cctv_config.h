@@ -11,6 +11,7 @@ struct CctvConfig {
     std::string password;
     std::string profile_token;
     std::string hls_playlist_url;
+    std::string mjpeg_stream_url;
     std::string streaming_protocol;
 
     [[nodiscard]] bool is_ready() const noexcept;
