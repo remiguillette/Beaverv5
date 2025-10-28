@@ -157,6 +157,102 @@ const char* navigation_type_to_string(WebKitNavigationType navigation_type) {
             return "other";
     }
 }
+
+const char* console_message_level_to_string(WebKitConsoleMessageLevel level) {
+    switch (level) {
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO:
+            return "info";
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_LOG:
+            return "log";
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_WARNING:
+            return "warning";
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_ERROR:
+            return "error";
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_DEBUG:
+            return "debug";
+        default:
+            return "unknown";
+    }
+}
+
+const char* console_message_source_to_string(WebKitConsoleMessageSource source) {
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_HTML
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_HTML) {
+        return "html";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_XML
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_XML) {
+        return "xml";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_JAVASCRIPT
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_JAVASCRIPT) {
+        return "javascript";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_NETWORK
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_NETWORK) {
+        return "network";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_CONSOLE_API
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_CONSOLE_API) {
+        return "console-api";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_STORAGE
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_STORAGE) {
+        return "storage";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_APP_CACHE
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_APP_CACHE) {
+        return "app-cache";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_RENDERING
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_RENDERING) {
+        return "rendering";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_CSS
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_CSS) {
+        return "css";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_SECURITY
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_SECURITY) {
+        return "security";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_CONTENT_BLOCKER
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_CONTENT_BLOCKER) {
+        return "content-blocker";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_MEDIA
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_MEDIA) {
+        return "media";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_WEBRTC
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_WEBRTC) {
+        return "webrtc";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_ITP
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_ITP) {
+        return "itp";
+    }
+#endif
+#ifdef WEBKIT_CONSOLE_MESSAGE_SOURCE_OTHER
+    if (source == WEBKIT_CONSOLE_MESSAGE_SOURCE_OTHER) {
+        return "other";
+    }
+#endif
+    return "unknown";
+}
 }  // namespace
 
 void GtkApp::build_ui(GtkApplication* application) {
@@ -197,6 +293,7 @@ void GtkApp::build_ui(GtkApplication* application) {
 
     GtkWidget* webview = configure_webview();
     g_signal_connect(webview, "decide-policy", G_CALLBACK(GtkApp::on_decide_policy), this);
+    g_signal_connect(webview, "console-message-sent", G_CALLBACK(GtkApp::on_console_message), this);
 #if GTK_MAJOR_VERSION >= 4
     gtk_window_set_child(GTK_WINDOW(window), webview);
 #else
@@ -300,6 +397,49 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 
     webkit_policy_decision_ignore(decision);
     return TRUE;
+}
+
+gboolean GtkApp::on_console_message(WebKitWebView* /*web_view*/, WebKitConsoleMessage* message,
+                                    gpointer /*user_data*/) {
+    if (message == nullptr) {
+        return FALSE;
+    }
+
+    const gchar* text = webkit_console_message_get_text(message);
+    if (text == nullptr) {
+        text = "";
+    }
+
+    const gchar* source_id = webkit_console_message_get_source_id(message);
+    if (source_id == nullptr || source_id[0] == '\0') {
+        source_id = "<unknown>";
+    }
+
+    const guint line = webkit_console_message_get_line(message);
+    const WebKitConsoleMessageLevel level = webkit_console_message_get_level(message);
+    const WebKitConsoleMessageSource source = webkit_console_message_get_source(message);
+
+    const char* level_string = console_message_level_to_string(level);
+    const char* source_string = console_message_source_to_string(source);
+
+    gchar* formatted = g_strdup_printf("WebView console [%s/%s:%u] (%s) %s", source_string,
+                                       source_id, line, level_string, text);
+
+    switch (level) {
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_ERROR:
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_WARNING:
+            g_warning("%s", formatted);
+            break;
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO:
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_LOG:
+        case WEBKIT_CONSOLE_MESSAGE_LEVEL_DEBUG:
+        default:
+            g_message("%s", formatted);
+            break;
+    }
+
+    g_free(formatted);
+    return FALSE;
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
