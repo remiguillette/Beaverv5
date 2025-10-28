@@ -2,10 +2,17 @@
 
 BeaverKiosk is now a single C++20 codebase that powers both a headless HTTP server and a native GTK 4 desktop experience. A lightweight **middleware layer** (`AppManager`) sits between the presentation layers and the underlying data so every user interface stays in sync without duplicating logic. With WebKitGTK embedded into the GTK shell, the desktop window now renders the exact HTML served by the HTTP mode.
 
+## Project Status
+
+- **Core runtime shared across UIs:** HTTP and GTK modes both consume the middleware output so feature development happens once.
+- **BeaverPhone dialer completed:** The in-browser dialpad streams dial actions over a resilient WebSocket channel (`ws://<host>:5001`) for external automation.
+- **Additional kiosk apps staged:** Tiles for BeaverSystem, BeaverAlarm, BeaverTask, BeaverDoc, BeaverDebian, and BeaverNet are scaffolded while their backends are under construction.
+
 ## Highlights
 
 - **Shared Core:** `AppManager` exposes the kiosk catalogue as structured data and can serialise it to HTML or JSON.
 - **HTTP Front-End:** A POSIX socket server serves HTML, JSON, and static assets using the middleware output.
+- **WebSocket Dialer Bridge:** The BeaverPhone UI automatically connects to `ws://<host>:5001` (upgrading to `wss://` when appropriate) to deliver dial payloads to companion services.
 - **GTK 4 Front-End:** WebKitGTK embeds the exact same HTML/CSS experience as the HTTP mode, so both surfaces stay visually identical.
 - **Clang-First Build:** The Makefile targets `clang++` by default and consumes the proper GTK 4 flags via `pkg-config`.
 - **Single Binary:** `./beaver_kiosk` selects the desired UI at runtime (`--http` or `--gtk`).
@@ -32,6 +39,16 @@ BeaverKiosk is now a single C++20 codebase that powers both a headless HTTP serv
 ├── docs/debian-local.md         # Debian focused setup guide
 └── Makefile                     # clang + GTK aware build instructions
 ```
+
+## Apps
+
+- BeaverPhone (**completed**) – interactive dialer with WebSocket call dispatch.
+- BeaverSystem – placeholder for system management tooling.
+- BeaverAlarm – placeholder for alert/monitoring console.
+- BeaverTask – placeholder for task orchestration.
+- BeaverDoc – placeholder for documentation hub.
+- BeaverDebian – placeholder for Debian integration utilities.
+- BeaverNet – placeholder for network/browser experience.
 
 ## Building
 

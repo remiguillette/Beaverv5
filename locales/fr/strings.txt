@@ -19,6 +19,5 @@ Clear=Effacer
 Connected=Connecté
 Not connected=Non connecté
 Connection in progress=Connexion en cours
-BeaverPhone description=Une maquette ludique du composeur BeaverPhone. Touchez les chiffres pour composer un numéro et imaginez être connecté instantanément.
 Phone extensions=Extensions
 Extension prefix=Poste

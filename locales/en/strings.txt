@@ -19,6 +19,5 @@ Clear=Clear
 Connected=Connected
 Not connected=Not connected
 Connection in progress=Connection in progress
-BeaverPhone description=A playful dialer mockup for BeaverPhone. Tap the digits to compose a number and imagine connecting instantly.
 Phone extensions=Extensions
 Extension prefix=Ext.
