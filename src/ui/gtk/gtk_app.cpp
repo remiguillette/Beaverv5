@@ -50,6 +50,22 @@ std::string build_base_uri() {
     return uri;
 }
 
+std::string strip_trailing_slashes(std::string path) {
+    if (path.size() <= 1) {
+        return path;
+    }
+
+    std::size_t new_size = path.size();
+    while (new_size > 1 && path[new_size - 1] == '/') {
+        --new_size;
+    }
+
+    if (new_size != path.size()) {
+        path.resize(new_size);
+    }
+    return path;
+}
+
 std::string normalize_navigation_path(const std::string& path) {
     if (path.empty()) {
         return path;
@@ -67,14 +83,14 @@ std::string normalize_navigation_path(const std::string& path) {
         if (!remainder.empty() && remainder.front() != '/') {
             remainder.insert(remainder.begin(), '/');
         }
-        return remainder;
+        return strip_trailing_slashes(remainder);
     }
 
     if (path.front() != '/') {
-        return std::string("/") + path;
+        return strip_trailing_slashes(std::string("/") + path);
     }
 
-    return path;
+    return strip_trailing_slashes(path);
 }
 
 Language language_from_query(const std::string& query, Language fallback) {
