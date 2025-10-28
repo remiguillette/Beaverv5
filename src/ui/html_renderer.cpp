@@ -598,6 +598,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
           try {
             const payload = {
               type: 'dial',
+              action: 'dial',
               number: dialDigits,
               source: 'BeaverPhone Dialpad',
             };
