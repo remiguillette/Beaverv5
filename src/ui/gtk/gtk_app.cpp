@@ -158,6 +158,7 @@ const char* navigation_type_to_string(WebKitNavigationType navigation_type) {
     }
 }
 
+#if defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
 const char* console_message_level_to_string(WebKitConsoleMessageLevel level) {
     switch (level) {
         case WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO:
@@ -253,6 +254,7 @@ const char* console_message_source_to_string(WebKitConsoleMessageSource source) 
 #endif
     return "unknown";
 }
+#endif  // defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
 }  // namespace
 
 void GtkApp::build_ui(GtkApplication* application) {
@@ -293,7 +295,9 @@ void GtkApp::build_ui(GtkApplication* application) {
 
     GtkWidget* webview = configure_webview();
     g_signal_connect(webview, "decide-policy", G_CALLBACK(GtkApp::on_decide_policy), this);
+#if defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
     g_signal_connect(webview, "console-message-sent", G_CALLBACK(GtkApp::on_console_message), this);
+#endif
 #if GTK_MAJOR_VERSION >= 4
     gtk_window_set_child(GTK_WINDOW(window), webview);
 #else
@@ -399,8 +403,17 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     return TRUE;
 }
 
-gboolean GtkApp::on_console_message(WebKitWebView* /*web_view*/, WebKitConsoleMessage* message,
+gboolean GtkApp::on_console_message(WebKitWebView* /*web_view*/,
+#if defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
+                                    WebKitConsoleMessage* message,
+#else
+                                    gpointer message,
+#endif
                                     gpointer /*user_data*/) {
+#if !defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
+    (void)message;
+    return FALSE;
+#else
     if (message == nullptr) {
         return FALSE;
     }
@@ -440,6 +453,7 @@ gboolean GtkApp::on_console_message(WebKitWebView* /*web_view*/, WebKitConsoleMe
 
     g_free(formatted);
     return FALSE;
+#endif
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
