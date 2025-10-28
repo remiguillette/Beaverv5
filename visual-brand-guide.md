@@ -217,3 +217,29 @@ Shape: Rounded card (border-radius: 16px).
 State: A transparent 2px border.
 
 Hover State: The border becomes visible using one of the secondary accent colors (e.g., border-color: var(--accent-violet);).
+
+4. BeaverAlarm Console Layout
+
+The BeaverAlarm application extends the core visual language with a security-focused console.
+
+Keypad Card (alarm-card--keypad):
+
+Layout mirrors the BeaverPhone dialpad with a compact 3×4 grid (alarm-keypad) and a pill-shaped action bar.
+
+Display (alarm-display): Rounded container that swaps between muted placeholder text and masked bullet glyphs when digits are entered. The empty state leans on var(--text-muted) to communicate readiness without overwhelming the console.
+
+Actions (alarm-action): CTA buttons reuse the tinted background motif. Arm/Disarm lean on the green and cyan accents, while Panic uses the red accent for immediacy.
+
+Status Card (alarm-card--status):
+
+Indicators are rendered as list items with glowing badges (alarm-status__badge--fire, --police, etc.), tapping the accent palette to differentiate Fire, Police, Medical, and Auxiliary services.
+
+State styling relies on data-state attributes. Offline tones down the badge, while Alert intensifies the red accent and updates the value label to the translated “Alert”.
+
+CCTV PTZ Placeholder (alarm-card--cctv):
+
+A dashed inset viewport communicates a reserved space for the future live feed. The placeholder copy uses uppercase amber lettering to signal its importance while the muted hint text explains the roadmap (“Live PTZ controls and video will display here.”).
+
+Responsive Behavior:
+
+Keypad buttons collapse gracefully below 640px (smaller columns), and action buttons wrap into a two-column grid to maintain tap targets on touch devices.

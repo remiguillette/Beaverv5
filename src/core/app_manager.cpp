@@ -66,7 +66,8 @@ AppManager::AppManager()
            {make_route_entry("apps/beaversystem", false),
             make_route_entry("/apps/beaversystem", false)}},
           {"BeaverAlarm", "amber", "icons/shield-alert.svg",
-           {make_route_entry("", false), make_route_entry("", false)}},
+           {make_route_entry("apps/beaveralarm", false),
+            make_route_entry("/apps/beaveralarm", false)}},
           {"BeaverTask", "red", "icons/square-check-big.svg",
            {make_route_entry("", false), make_route_entry("", false)}},
           {"BeaverDoc", "green", "icons/file-text.svg",
@@ -250,6 +251,36 @@ std::string AppManager::beaverphone_page_html(Language language,
                   language_to_string(language));
     } else {
         g_message("AppManager generated BeaverPhone HTML. language=%s bytes=%zu",
+                  language_to_string(language), html.size());
+    }
+    return html;
+}
+
+std::string AppManager::beaveralarm_page_html() const {
+    return beaveralarm_page_html(default_language_, BeaverAlarmMenuLinkMode::kAbsoluteRoot);
+}
+
+std::string AppManager::beaveralarm_page_html(Language language,
+                                              BeaverAlarmMenuLinkMode menu_link_mode) const {
+    return beaveralarm_page_html(language, "", menu_link_mode);
+}
+
+std::string AppManager::beaveralarm_page_html(Language language,
+                                              const std::string& asset_prefix) const {
+    return beaveralarm_page_html(language, asset_prefix,
+                                 BeaverAlarmMenuLinkMode::kAbsoluteRoot);
+}
+
+std::string AppManager::beaveralarm_page_html(Language language,
+                                              const std::string& asset_prefix,
+                                              BeaverAlarmMenuLinkMode menu_link_mode) const {
+    std::string html = generate_beaveralarm_console_html(translation_catalog_, language,
+                                                         asset_prefix, menu_link_mode);
+    if (html.empty()) {
+        g_warning("AppManager generated empty BeaverAlarm HTML for language: %s",
+                  language_to_string(language));
+    } else {
+        g_message("AppManager generated BeaverAlarm HTML. language=%s bytes=%zu",
                   language_to_string(language), html.size());
     }
     return html;

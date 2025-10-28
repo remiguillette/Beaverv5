@@ -101,6 +101,36 @@ constexpr std::array<DialpadKey, 12> kDialpadKeys = {{{"1", ""},
                                                        {"0", "+"},
                                                        {"#", ""}}};
 
+struct AlarmKey {
+    const char* symbol;
+};
+
+constexpr std::array<AlarmKey, 12> kAlarmKeys = {{{"1"},
+                                                  {"2"},
+                                                  {"3"},
+                                                  {"4"},
+                                                  {"5"},
+                                                  {"6"},
+                                                  {"7"},
+                                                  {"8"},
+                                                  {"9"},
+                                                  {"*"},
+                                                  {"0"},
+                                                  {"#"}}};
+
+struct AlarmIndicatorDefinition {
+    const char* id;
+    const char* badge_modifier;
+    const char* translation_key;
+};
+
+constexpr std::array<AlarmIndicatorDefinition, 4> kAlarmIndicators = {{
+    {"fire", "alarm-status__badge--fire", "Fire"},
+    {"police", "alarm-status__badge--police", "Police"},
+    {"medical", "alarm-status__badge--medical", "Medical"},
+    {"auxiliary", "alarm-status__badge--auxiliary", "Auxiliary"},
+}};
+
 struct ExtensionContact {
     const char* id;
     const char* name_fr;
@@ -284,6 +314,11 @@ std::string build_menu_href(Language language, BeaverphoneMenuLinkMode menu_link
 
 std::string build_menu_href(Language language, BeaverSystemMenuLinkMode menu_link_mode) {
     const bool use_relative = (menu_link_mode == BeaverSystemMenuLinkMode::kRelativeIndex);
+    return build_menu_href_common(language, use_relative);
+}
+
+std::string build_menu_href(Language language, BeaverAlarmMenuLinkMode menu_link_mode) {
+    const bool use_relative = (menu_link_mode == BeaverAlarmMenuLinkMode::kRelativeIndex);
     return build_menu_href_common(language, use_relative);
 }
 
@@ -787,6 +822,262 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
       })();
     </script>
 )";
+    html << "</body>\n";
+    html << "</html>\n";
+
+    return html.str();
+}
+
+std::string generate_beaveralarm_console_html(const TranslationCatalog& translations,
+                                              Language language,
+                                              const std::string& asset_prefix,
+                                              BeaverAlarmMenuLinkMode menu_link_mode) {
+    std::ostringstream html;
+
+    const char* lang_code = html_lang_code(language);
+    const std::string alarm_label = translations.translate("BeaverAlarm", language);
+    const std::string keypad_label = translations.translate("Alarm keypad", language);
+    const std::string enter_code_label = translations.translate("Enter code", language);
+    const std::string arm_label = translations.translate("Arm", language);
+    const std::string disarm_label = translations.translate("Disarm", language);
+    const std::string panic_label = translations.translate("Panic", language);
+    const std::string clear_label = translations.translate("Clear", language);
+    const std::string status_title = translations.translate("Status indicators", language);
+    const std::string ready_label = translations.translate("System ready", language);
+    const std::string armed_label = translations.translate("Alarm armed", language);
+    const std::string disarmed_label = translations.translate("System disarmed", language);
+    const std::string alert_label = translations.translate("Alarm triggered", language);
+    const std::string online_label = translations.translate("Online", language);
+    const std::string offline_label = translations.translate("Offline", language);
+    const std::string alert_status_label = translations.translate("Alert", language);
+    const std::string cctv_label = translations.translate("CCTV PTZ feed", language);
+    const std::string coming_soon_label = translations.translate("Coming soon", language);
+    const std::string cctv_hint =
+        translations.translate("Live PTZ controls and video will display here.", language);
+    const std::string back_to_menu = translations.translate("Back to menu", language);
+    const std::string language_label = translations.translate("Language selection", language);
+    const std::string switch_to_french = translations.translate("Switch to French", language);
+    const std::string switch_to_english = translations.translate("Switch to English", language);
+
+    const std::string menu_href = build_menu_href(language, menu_link_mode);
+    const bool use_absolute_alarm_links =
+        (menu_link_mode == BeaverAlarmMenuLinkMode::kAbsoluteRoot);
+    const std::string alarm_base =
+        use_absolute_alarm_links ? "/apps/beaveralarm" : "apps/beaveralarm";
+    const std::string alarm_french_href = alarm_base + "?lang=fr";
+    const std::string alarm_english_href = alarm_base + "?lang=en";
+
+    html << "<!DOCTYPE html>\n";
+    html << "<html lang=\"" << lang_code << "\">\n";
+    html << "<head>\n";
+    html << "  <meta charset=\"UTF-8\" />\n";
+    html << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n";
+    html << "  <title>" << html_escape(alarm_label) << " - BeaverKiosk</title>\n";
+    html << "  <link rel=\"stylesheet\" href=\""
+         << resolve_asset_path(asset_prefix, "css/styles.css") << "\" />\n";
+    html << "</head>\n";
+    html << "<body>\n";
+    html << "  <div id=\"root\">\n";
+    html << "    <div class=\"alarm-page\">\n";
+    html << "      <header class=\"alarm-header\">\n";
+    html << "        <a class=\"alarm-back-link\" href=\"" << menu_href << "\">"
+         << html_escape(back_to_menu) << "</a>\n";
+    html << "        <h1 class=\"alarm-title\">" << html_escape(alarm_label) << "</h1>\n";
+    html << "        <nav class=\"lang-toggle\" role=\"group\" aria-label=\""
+         << html_escape(language_label) << "\">\n";
+    html << language_toggle_button("FR", alarm_french_href, switch_to_french,
+                                   language == Language::French);
+    html << language_toggle_button("EN", alarm_english_href, switch_to_english,
+                                   language == Language::English);
+    html << "        </nav>\n";
+    html << "        <div class=\"alarm-header__accent\" aria-hidden=\"true\"></div>\n";
+    html << "      </header>\n";
+    html << "      <main class=\"alarm-layout\">\n";
+    html << "        <section class=\"alarm-card alarm-card--keypad\" aria-labelledby=\"alarm-keypad-title\">\n";
+    html << "          <div class=\"alarm-card__header\">\n";
+    html << "            <h2 id=\"alarm-keypad-title\" class=\"alarm-card__title\">"
+         << html_escape(keypad_label) << "</h2>\n";
+    html << "            <p class=\"alarm-card__subtitle\" data-role=\"alarm-subtitle\""
+         << " data-label-ready=\"" << html_escape(ready_label) << "\""
+         << " data-label-armed=\"" << html_escape(armed_label) << "\""
+         << " data-label-disarmed=\"" << html_escape(disarmed_label) << "\""
+         << " data-label-alert=\"" << html_escape(alert_label) << "\">"
+         << html_escape(ready_label) << "</p>\n";
+    html << "          </div>\n";
+    html << "          <div class=\"alarm-display is-empty\" aria-live=\"polite\" aria-atomic=\"true\""
+         << " data-placeholder=\"" << html_escape(enter_code_label) << "\">\n";
+    html << "            <span class=\"alarm-display__value\">" << html_escape(enter_code_label)
+         << "</span>\n";
+    html << "          </div>\n";
+    html << "          <div class=\"alarm-keypad\" role=\"group\" aria-label=\""
+         << html_escape(keypad_label) << "\">\n";
+
+    for (const auto& key : kAlarmKeys) {
+        html << "            <button type=\"button\" class=\"alarm-key\" data-key=\""
+             << html_escape(key.symbol) << "\">" << html_escape(key.symbol)
+             << "</button>\n";
+    }
+
+    html << "          </div>\n";
+    html << "          <div class=\"alarm-keypad__actions\">\n";
+    html << "            <button type=\"button\" class=\"alarm-action alarm-action--clear\""
+         << " data-action=\"clear\">" << html_escape(clear_label) << "</button>\n";
+    html << "            <button type=\"button\" class=\"alarm-action alarm-action--arm\""
+         << " data-action=\"arm\">" << html_escape(arm_label) << "</button>\n";
+    html << "            <button type=\"button\" class=\"alarm-action alarm-action--disarm\""
+         << " data-action=\"disarm\">" << html_escape(disarm_label) << "</button>\n";
+    html << "            <button type=\"button\" class=\"alarm-action alarm-action--panic\""
+         << " data-action=\"panic\">" << html_escape(panic_label) << "</button>\n";
+    html << "          </div>\n";
+    html << "        </section>\n";
+    html << "        <section class=\"alarm-card alarm-card--status\" aria-labelledby=\"alarm-status-title\">\n";
+    html << "          <div class=\"alarm-card__header\">\n";
+    html << "            <h2 id=\"alarm-status-title\" class=\"alarm-card__title\">"
+         << html_escape(status_title) << "</h2>\n";
+    html << "            <p class=\"alarm-card__subtitle\" data-role=\"alarm-subtitle\""
+         << " data-label-ready=\"" << html_escape(ready_label) << "\""
+         << " data-label-armed=\"" << html_escape(armed_label) << "\""
+         << " data-label-disarmed=\"" << html_escape(disarmed_label) << "\""
+         << " data-label-alert=\"" << html_escape(alert_label) << "\">"
+         << html_escape(ready_label) << "</p>\n";
+    html << "          </div>\n";
+    html << "          <ul class=\"alarm-status-list\">\n";
+
+    for (const auto& indicator : kAlarmIndicators) {
+        const std::string indicator_label =
+            translations.translate(indicator.translation_key, language);
+        html << "            <li class=\"alarm-status\" data-indicator=\"" << indicator.id
+             << "\" data-state=\"online\">\n";
+        html << "              <span class=\"alarm-status__badge " << indicator.badge_modifier
+             << "\" aria-hidden=\"true\"></span>\n";
+        html << "              <div class=\"alarm-status__content\">\n";
+        html << "                <span class=\"alarm-status__label\">"
+             << html_escape(indicator_label) << "</span>\n";
+        html << "                <span class=\"alarm-status__value\" data-label-online=\""
+             << html_escape(online_label) << "\" data-label-offline=\""
+             << html_escape(offline_label) << "\" data-label-alert=\""
+             << html_escape(alert_status_label) << "\">" << html_escape(online_label)
+             << "</span>\n";
+        html << "              </div>\n";
+        html << "            </li>\n";
+    }
+
+    html << "          </ul>\n";
+    html << "        </section>\n";
+    html << "        <section class=\"alarm-card alarm-card--cctv\" aria-labelledby=\"alarm-cctv-title\">\n";
+    html << "          <div class=\"alarm-card__header\">\n";
+    html << "            <h2 id=\"alarm-cctv-title\" class=\"alarm-card__title\">"
+         << html_escape(cctv_label) << "</h2>\n";
+    html << "          </div>\n";
+    html << "          <div class=\"alarm-cctv__viewport\" role=\"presentation\">\n";
+    html << "            <div class=\"alarm-cctv__placeholder\">\n";
+    html << "              <span class=\"alarm-cctv__label\">" << html_escape(coming_soon_label)
+         << "</span>\n";
+    html << "              <span class=\"alarm-cctv__hint\">" << html_escape(cctv_hint)
+         << "</span>\n";
+    html << "            </div>\n";
+    html << "          </div>\n";
+    html << "        </section>\n";
+    html << "      </main>\n";
+    html << "    </div>\n";
+    html << "  </div>\n";
+    html << "  <script>\n";
+    html << "    (() => {\n";
+    html << "      const page = document.querySelector('.alarm-page');\n";
+    html << "      if (!page) {\n";
+    html << "        return;\n";
+    html << "      }\n";
+    html << "      const display = page.querySelector('.alarm-display');\n";
+    html << "      const displayValue = page.querySelector('.alarm-display__value');\n";
+    html << "      const keypad = page.querySelector('.alarm-keypad');\n";
+    html << "      const subtitleElements = Array.from(page.querySelectorAll('[data-role=\"alarm-subtitle\"]'));\n";
+    html << "      const statusItems = Array.from(page.querySelectorAll('.alarm-status'));\n";
+    html << "      const placeholder = display ? display.getAttribute('data-placeholder') || '' : '';\n";
+    html << "      const maxLength = 6;\n";
+    html << "      let digits = [];\n";
+    html << "      const updateSubtitles = (stateKey) => {\n";
+    html << "        subtitleElements.forEach((element) => {\n";
+    html << "          const nextLabel = element.getAttribute('data-label-' + stateKey) || '';\n";
+    html << "          if (nextLabel) {\n";
+    html << "            element.textContent = nextLabel;\n";
+    html << "          }\n";
+    html << "        });\n";
+    html << "      };\n";
+    html << "      const renderDisplay = () => {\n";
+    html << "        if (!display || !displayValue) {\n";
+    html << "          return;\n";
+    html << "        }\n";
+    html << "        if (!digits.length) {\n";
+    html << "          display.classList.add('is-empty');\n";
+    html << "          displayValue.textContent = placeholder;\n";
+    html << "        } else {\n";
+    html << "          display.classList.remove('is-empty');\n";
+    html << "          displayValue.textContent = digits.map(() => '•').join('');\n";
+    html << "        }\n";
+    html << "      };\n";
+    html << "      const updateStatuses = (stateKey) => {\n";
+    html << "        statusItems.forEach((item) => {\n";
+    html << "          const value = item.querySelector('.alarm-status__value');\n";
+    html << "          if (!value) {\n";
+    html << "            return;\n";
+    html << "          }\n";
+    html << "          const label = value.getAttribute('data-label-' + stateKey) || value.textContent;\n";
+    html << "          value.textContent = label;\n";
+    html << "          item.setAttribute('data-state', stateKey);\n";
+    html << "        });\n";
+    html << "      };\n";
+    html << "      const setMode = (mode) => {\n";
+    html << "        page.setAttribute('data-alarm-mode', mode);\n";
+    html << "        if (mode === 'armed') {\n";
+    html << "          updateStatuses('online');\n";
+    html << "          updateSubtitles('armed');\n";
+    html << "        } else if (mode === 'disarmed') {\n";
+    html << "          updateStatuses('offline');\n";
+    html << "          updateSubtitles('disarmed');\n";
+    html << "        } else if (mode === 'alert') {\n";
+    html << "          updateStatuses('alert');\n";
+    html << "          updateSubtitles('alert');\n";
+    html << "        } else {\n";
+    html << "          updateStatuses('online');\n";
+    html << "          updateSubtitles('ready');\n";
+    html << "        }\n";
+    html << "      };\n";
+    html << "      if (keypad) {\n";
+    html << "        keypad.addEventListener('click', (event) => {\n";
+    html << "          const button = event.target.closest('button');\n";
+    html << "          if (!button || !keypad.contains(button)) {\n";
+    html << "            return;\n";
+    html << "          }\n";
+    html << "          const key = button.getAttribute('data-key');\n";
+    html << "          if (!key || digits.length >= maxLength) {\n";
+    html << "            return;\n";
+    html << "          }\n";
+    html << "          digits.push(key);\n";
+    html << "          renderDisplay();\n";
+    html << "        }, { passive: true });\n";
+    html << "      }\n";
+    html << "      page.addEventListener('click', (event) => {\n";
+    html << "        const actionButton = event.target.closest('.alarm-action');\n";
+    html << "        if (!actionButton || !page.contains(actionButton)) {\n";
+    html << "          return;\n";
+    html << "        }\n";
+    html << "        const action = actionButton.getAttribute('data-action');\n";
+    html << "        if (action === 'clear') {\n";
+    html << "          digits.length = 0;\n";
+    html << "          renderDisplay();\n";
+    html << "          setMode('idle');\n";
+    html << "        } else if (action === 'arm') {\n";
+    html << "          setMode('armed');\n";
+    html << "        } else if (action === 'disarm') {\n";
+    html << "          setMode('disarmed');\n";
+    html << "        } else if (action === 'panic') {\n";
+    html << "          setMode('alert');\n";
+    html << "        }\n";
+    html << "      });\n";
+    html << "      renderDisplay();\n";
+    html << "      setMode('idle');\n";
+    html << "    })();\n";
+    html << "  </script>\n";
     html << "</body>\n";
     html << "</html>\n";
 
