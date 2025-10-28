@@ -125,6 +125,24 @@ Language language_from_query(const std::string& query, Language fallback) {
 
     return language;
 }
+
+const char* navigation_type_to_string(WebKitNavigationType navigation_type) {
+    switch (navigation_type) {
+        case WEBKIT_NAVIGATION_TYPE_LINK_CLICKED:
+            return "link-clicked";
+        case WEBKIT_NAVIGATION_TYPE_FORM_SUBMITTED:
+            return "form-submitted";
+        case WEBKIT_NAVIGATION_TYPE_BACK_FORWARD:
+            return "back-forward";
+        case WEBKIT_NAVIGATION_TYPE_RELOAD:
+            return "reload";
+        case WEBKIT_NAVIGATION_TYPE_FORM_RESUBMITTED:
+            return "form-resubmitted";
+        case WEBKIT_NAVIGATION_TYPE_OTHER:
+        default:
+            return "other";
+    }
+}
 }  // namespace
 
 void GtkApp::build_ui(GtkApplication* application) {
@@ -164,17 +182,28 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         return FALSE;
     }
 
-    if (self->suppress_decide_policy_request_) {
-        self->suppress_decide_policy_request_ = false;
-        return FALSE;
-    }
-
     auto* navigation_decision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
     WebKitNavigationAction* action =
         webkit_navigation_policy_decision_get_navigation_action(navigation_decision);
     WebKitURIRequest* request = webkit_navigation_action_get_request(action);
     const gchar* uri = webkit_uri_request_get_uri(request);
     if (uri == nullptr) {
+        return FALSE;
+    }
+
+    const WebKitNavigationType navigation_type =
+        webkit_navigation_action_get_navigation_type(action);
+    const gboolean is_user_gesture = webkit_navigation_action_is_user_gesture(action);
+    const guint mouse_button = webkit_navigation_action_get_mouse_button(action);
+    const guint modifiers = webkit_navigation_action_get_modifiers(action);
+
+    g_message(
+        "GtkApp navigation action received. uri=%s type=%s user_gesture=%s mouse_button=%u modifiers=0x%x",
+        uri, navigation_type_to_string(navigation_type), is_user_gesture ? "true" : "false",
+        mouse_button, modifiers);
+
+    if (!is_user_gesture) {
+        g_message("GtkApp allowing navigation because it was not triggered by a user gesture.");
         return FALSE;
     }
 
@@ -228,7 +257,6 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
             g_warning("GtkApp received empty BeaverPhone HTML for language: %s",
                       language_to_string(language));
         }
-        self->suppress_next_decide_policy();
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
     }
 
@@ -245,10 +273,5 @@ void GtkApp::load_language(WebKitWebView* web_view, Language language) {
         g_warning("GtkApp received empty menu HTML for language: %s",
                   language_to_string(language));
     }
-    suppress_next_decide_policy();
     webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
-}
-
-void GtkApp::suppress_next_decide_policy() {
-    suppress_decide_policy_request_ = true;
 }
