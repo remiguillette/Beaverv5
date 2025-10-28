@@ -429,6 +429,8 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
         const maxExtensionLength = 4;
         let pendingFrame = false;
         let lastRendered = '';
+        let isDisplayEmpty = !displayWrapper || displayWrapper.classList.contains('is-empty');
+        let lastCallButtonDisabled = callButton ? callButton.disabled : true;
 
         const isCompleteLength = (length) => length === maxPhoneLength || length === maxExtensionLength;
 
@@ -452,14 +454,21 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
             return;
           }
 
-          if (digits.length === 0) {
-            displayWrapper.classList.add('is-empty');
+          const shouldBeEmpty = digits.length === 0;
+          if (shouldBeEmpty) {
+            if (!isDisplayEmpty) {
+              displayWrapper.classList.add('is-empty');
+              isDisplayEmpty = true;
+            }
             if (lastRendered !== placeholder) {
               displayValue.textContent = placeholder;
               lastRendered = placeholder;
             }
           } else {
-            displayWrapper.classList.remove('is-empty');
+            if (isDisplayEmpty) {
+              displayWrapper.classList.remove('is-empty');
+              isDisplayEmpty = false;
+            }
             const joined = formatDigits(digits);
             if (joined !== lastRendered) {
               displayValue.textContent = joined;
@@ -468,7 +477,11 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
           }
 
           if (callButton) {
-            callButton.disabled = !isCompleteLength(digits.length);
+            const shouldDisable = !isCompleteLength(digits.length);
+            if (shouldDisable !== lastCallButtonDisabled) {
+              callButton.disabled = shouldDisable;
+              lastCallButtonDisabled = shouldDisable;
+            }
           }
         };
 
@@ -489,10 +502,9 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
         };
 
         const clearDigits = () => {
-          if (!digits.length) {
-            return;
+          if (digits.length) {
+            digits.length = 0;
           }
-          digits.length = 0;
           scheduleRender();
         };
 
@@ -611,6 +623,13 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
           });
         };
 
+        const resetAfterCall = () => {
+          clearDigits();
+          if (callButton) {
+            callButton.blur();
+          }
+        };
+
         const sendDialPayload = (dialDigits) => {
           if (!dialDigits) {
             return false;
@@ -628,6 +647,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
             };
             socket.send(JSON.stringify(payload));
             console.debug('[BeaverPhone] Dial payload sent.', payload);
+            resetAfterCall();
             return true;
           } catch (error) {
             console.error('[BeaverPhone] Failed to send dial payload.', error);
@@ -695,9 +715,16 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
               return;
             }
             const payload = digits.join('');
-            window.setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('beaverphone:call', { detail: { digits: payload } }));
-            }, 0);
+            const dispatchCall = () => {
+              window.dispatchEvent(
+                new CustomEvent('beaverphone:call', { detail: { digits: payload } })
+              );
+            };
+            if (typeof queueMicrotask === 'function') {
+              queueMicrotask(dispatchCall);
+            } else {
+              window.setTimeout(dispatchCall, 0);
+            }
           }, { passive: true });
         }
 
