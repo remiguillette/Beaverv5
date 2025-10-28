@@ -171,7 +171,8 @@ void HttpServerApp::handle_request(int client_socket) {
     constexpr const char* kHttpAssetPrefix = "/";
 
     if (path == "/" || path == "/index.html") {
-        response.body = manager_.to_html(language, kHttpAssetPrefix);
+        response.body =
+            manager_.to_html(language, kHttpAssetPrefix, MenuRouteMode::kHttpServer);
         response.headers["Content-Type"] = "text/html; charset=utf-8";
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
         response.headers["Content-Language"] = language == Language::French ? "fr" : "en";

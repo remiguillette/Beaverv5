@@ -6,11 +6,21 @@
 #include "core/language.h"
 #include "core/translation_catalog.h"
 
+struct AppRoutes {
+    std::string kiosk;
+    std::string http;
+};
+
 struct AppTile {
     std::string name;
     std::string accent;
     std::string icon;
-    std::string route;
+    AppRoutes routes;
+};
+
+enum class MenuRouteMode {
+    kKiosk,
+    kHttpServer,
 };
 
 enum class BeaverphoneMenuLinkMode {
@@ -31,7 +41,9 @@ public:
     std::string to_json(Language language) const;
     std::string to_html() const;
     std::string to_html(Language language) const;
-    std::string to_html(Language language, const std::string& asset_prefix) const;
+    std::string to_html(Language language, MenuRouteMode route_mode) const;
+    std::string to_html(Language language, const std::string& asset_prefix,
+                        MenuRouteMode route_mode = MenuRouteMode::kHttpServer) const;
     std::string beaverphone_page_html() const;
     std::string beaverphone_page_html(Language language,
                                       BeaverphoneMenuLinkMode menu_link_mode =

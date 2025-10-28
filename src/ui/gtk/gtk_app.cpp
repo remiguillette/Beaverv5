@@ -290,7 +290,7 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
-    std::string html = manager_.to_html(language);
+    std::string html = manager_.to_html(language, MenuRouteMode::kKiosk);
     std::string base_uri = build_base_uri();
     g_message("GtkApp loading menu page. language=%s html_bytes=%zu base_uri=%s",
               language_to_string(language), html.size(), base_uri.c_str());

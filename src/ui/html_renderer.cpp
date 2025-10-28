@@ -128,13 +128,29 @@ std::string contact_initial(const ExtensionContact& contact, Language language) 
 }
 }  // namespace
 
+namespace {
+
+std::string resolve_route(const AppTile& app, MenuRouteMode route_mode) {
+    switch (route_mode) {
+        case MenuRouteMode::kKiosk:
+            return app.routes.kiosk;
+        case MenuRouteMode::kHttpServer:
+        default:
+            return app.routes.http;
+    }
+}
+
+}  // namespace
+
 std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog& translations,
-                                   Language language, const std::string& asset_prefix) {
+                                   Language language, MenuRouteMode route_mode,
+                                   const std::string& asset_prefix) {
     std::ostringstream html;
 
-    const bool has_route = !app.route.empty();
+    const std::string route = resolve_route(app, route_mode);
+    const bool has_route = !route.empty();
     if (has_route) {
-        html << "<a href=\"" << app.route << "\" class=\"app-tile app-tile--" << app.accent
+        html << "<a href=\"" << route << "\" class=\"app-tile app-tile--" << app.accent
              << "\">\n";
     } else {
         html << "<button type=\"button\" class=\"app-tile app-tile--" << app.accent << "\">\n";
@@ -156,6 +172,7 @@ std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog&
 
 std::string generate_menu_page_html(const std::vector<AppTile>& apps,
                                     const TranslationCatalog& translations, Language language,
+                                    MenuRouteMode route_mode,
                                     const std::string& asset_prefix) {
     std::ostringstream html;
 
@@ -199,7 +216,8 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     html << "      <main class=\"menu-grid\">\n";
 
     for (const auto& app : apps) {
-        html << "        " << generate_app_tile_html(app, translations, language, asset_prefix);
+        html << "        "
+             << generate_app_tile_html(app, translations, language, route_mode, asset_prefix);
     }
     
     html << "      </main>\n";
@@ -246,8 +264,12 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     const std::string switch_to_english = translations.translate("Switch to English", language);
 
     const std::string menu_href = build_menu_href(language, menu_link_mode);
-    const std::string beaverphone_french_href = "apps/beaverphone?lang=fr";
-    const std::string beaverphone_english_href = "apps/beaverphone?lang=en";
+    const bool use_absolute_beaverphone_links =
+        (menu_link_mode == BeaverphoneMenuLinkMode::kAbsoluteRoot);
+    const std::string beaverphone_base =
+        use_absolute_beaverphone_links ? "/apps/beaverphone" : "apps/beaverphone";
+    const std::string beaverphone_french_href = beaverphone_base + "?lang=fr";
+    const std::string beaverphone_english_href = beaverphone_base + "?lang=en";
 
     html << "<!DOCTYPE html>\n";
     html << "<html lang=\"" << lang_code << "\">\n";
