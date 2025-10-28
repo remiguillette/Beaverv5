@@ -27,7 +27,8 @@ AppManager::AppManager()
            {"http://localhost:8000", "http://192.168.1.76:8000"}},
           {"BeaverDebian", "violet", "icons/server-cog.svg",
            {"http://localhost:9090/", "http://192.168.1.76:9090/"}},
-          {"BeaverNet", "amber", "icons/chromium.svg", {"", ""}}}),
+          {"BeaverNet", "amber", "icons/chromium.svg",
+           {"https://rgbeavernet.ca/", "https://rgbeavernet.ca/"}}}),
       default_language_(Language::French),
       translation_catalog_(locale_directory()) {
     g_message("AppManager initialized with %zu apps. default_language=%s", apps_.size(),
