@@ -187,9 +187,6 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     html << "  <meta charset=\"UTF-8\" />\n";
     html << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n";
     html << "  <title>BeaverKiosk - C++ Edition</title>\n";
-    html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
-    html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
-    html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
     html << "  <link rel=\"stylesheet\" href=\""
          << resolve_asset_path(asset_prefix, "css/styles.css") << "\" />\n";
     html << "</head>\n";
@@ -283,9 +280,6 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "  <meta charset=\"UTF-8\" />\n";
     html << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n";
     html << "  <title>" << beaverphone_label << " - BeaverKiosk</title>\n";
-    html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
-    html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
-    html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
     html << "  <link rel=\"stylesheet\" href=\""
          << resolve_asset_path(asset_prefix, "css/styles.css") << "\" />\n";
     html << "</head>\n";
@@ -400,95 +394,128 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "  </div>\n";
     html << R"(    <script>
       (function() {
-        const displayWrapper = document.querySelector('.dialpad-display');
-        const displayValue = document.querySelector('.dialpad-display__value');
+        const doc = document;
+        const displayWrapper = doc.querySelector('.dialpad-display');
+        const displayValue = doc.querySelector('.dialpad-display__value');
         const placeholder = displayWrapper ? displayWrapper.getAttribute('data-placeholder') || '' : '';
-        const callButton = document.querySelector('.dialpad-call-button');
-        const clearButton = document.querySelector('.dialpad-action--clear');
+        const callButton = doc.querySelector('.dialpad-call-button');
+        const clearButton = doc.querySelector('.dialpad-action--clear');
+        const dialpad = doc.querySelector('.dialpad-grid');
+        const extensions = doc.querySelector('.extension-list');
+        const raf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window)
+                                                 : (cb) => window.setTimeout(cb, 16);
+        const digits = [];
         const maxPhoneLength = 10;
         const maxExtensionLength = 4;
-        let digits = '';
+        let pendingFrame = false;
+        let lastRendered = '';
 
-        const formatDigits = (value) => {
-          if (value.length <= maxExtensionLength) {
-            return value;
+        const isCompleteLength = (length) => length === maxPhoneLength || length === maxExtensionLength;
+
+        const formatDigits = (buffer) => {
+          if (buffer.length <= maxExtensionLength) {
+            return buffer.join('');
           }
-          const area = value.slice(0, 3);
-          const central = value.slice(3, 6);
-          const line = value.slice(6, maxPhoneLength);
-          if (value.length <= 6) {
+          const joined = buffer.join('');
+          const area = joined.slice(0, 3);
+          const central = joined.slice(3, 6);
+          const line = joined.slice(6, maxPhoneLength);
+          if (joined.length <= 6) {
             return `(${area})-${central}`;
           }
           return `(${area})-${central}-${line}`;
         };
 
-        const isValidNumber = (value) => value.length === maxPhoneLength || value.length === maxExtensionLength;
-
-        const updateCallButtonState = () => {
-          if (!callButton) {
-            return;
-          }
-          callButton.disabled = !isValidNumber(digits);
-        };
-
-        const updateDisplay = () => {
+        const render = () => {
+          pendingFrame = false;
           if (!displayWrapper || !displayValue) {
             return;
           }
-          if (!digits.length) {
+
+          if (digits.length === 0) {
             displayWrapper.classList.add('is-empty');
-            displayValue.textContent = placeholder;
+            if (lastRendered !== placeholder) {
+              displayValue.textContent = placeholder;
+              lastRendered = placeholder;
+            }
           } else {
             displayWrapper.classList.remove('is-empty');
-            displayValue.textContent = formatDigits(digits);
+            const joined = formatDigits(digits);
+            if (joined !== lastRendered) {
+              displayValue.textContent = joined;
+              lastRendered = joined;
+            }
           }
-          updateCallButtonState();
+
+          if (callButton) {
+            callButton.disabled = !isCompleteLength(digits.length);
+          }
+        };
+
+        const scheduleRender = () => {
+          if (pendingFrame) {
+            return;
+          }
+          pendingFrame = true;
+          raf(render);
         };
 
         const appendDigit = (digit) => {
-          if (!/\d/.test(digit)) {
+          if (!digit || digits.length >= maxPhoneLength) {
             return;
           }
-          if (digits.length >= maxPhoneLength) {
-            return;
-          }
-          digits += digit;
-          updateDisplay();
+          digits.push(digit);
+          scheduleRender();
         };
 
         const clearDigits = () => {
-          digits = '';
-          updateDisplay();
+          if (!digits.length) {
+            return;
+          }
+          digits.length = 0;
+          scheduleRender();
         };
 
         const setDigits = (value, isExtension = false) => {
           const sanitized = (value || '').replace(/\D/g, '');
-          digits = isExtension ? sanitized.slice(0, maxExtensionLength) : sanitized.slice(0, maxPhoneLength);
-          updateDisplay();
+          const limit = isExtension ? maxExtensionLength : maxPhoneLength;
+          digits.length = 0;
+          for (let i = 0; i < sanitized.length && i < limit; ++i) {
+            digits.push(sanitized[i]);
+          }
+          scheduleRender();
         };
 
-        document.querySelectorAll('.dialpad-key').forEach((button) => {
-          button.addEventListener('click', () => {
+        if (dialpad) {
+          dialpad.addEventListener('click', (event) => {
+            const button = event.target.closest('.dialpad-key');
+            if (!button || !dialpad.contains(button)) {
+              return;
+            }
             const digit = button.getAttribute('data-digit');
             if (!digit) {
               return;
             }
             appendDigit(digit);
-          });
-        });
+          }, { passive: true });
+        }
 
-        document.querySelectorAll('.extension-card').forEach((card) => {
-          card.addEventListener('click', () => {
+        if (extensions) {
+          extensions.addEventListener('click', (event) => {
+            const card = event.target.closest('.extension-card');
+            if (!card || !extensions.contains(card)) {
+              return;
+            }
             const extension = card.getAttribute('data-extension-value');
             setDigits(extension, true);
-          });
-        });
+          }, { passive: true });
+        }
 
         if (clearButton) {
           clearButton.addEventListener('click', () => {
             clearDigits();
             clearButton.blur();
-          });
+          }, { passive: true });
         }
 
         if (callButton) {
@@ -496,11 +523,14 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
             if (callButton.disabled) {
               return;
             }
-            window.dispatchEvent(new CustomEvent('beaverphone:call', { detail: { digits } }));
-          });
+            const payload = digits.join('');
+            window.setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('beaverphone:call', { detail: { digits: payload } }));
+            }, 0);
+          }, { passive: true });
         }
 
-        updateDisplay();
+        render();
       })();
     </script>
 )";

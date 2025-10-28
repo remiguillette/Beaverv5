@@ -7,6 +7,7 @@
 #include <string>
 
 #include <webkit2/webkit2.h>
+#include <gdk/gdk.h>
 #include <glib.h>
 
 GtkApp::GtkApp(AppManager& manager) : manager_(manager) {}
@@ -164,7 +165,37 @@ void GtkApp::build_ui(GtkApplication* application) {
     gtk_window_set_default_size(GTK_WINDOW(window), 960, 640);
     gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 
-    GtkWidget* webview = webkit_web_view_new();
+    auto configure_webview = []() -> GtkWidget* {
+        static WebKitWebContext* shared_context = []() {
+            WebKitWebContext* context = webkit_web_context_new();
+            webkit_web_context_set_cache_model(context, WEBKIT_CACHE_MODEL_WEB_BROWSER);
+            return context;
+        }();
+
+        WebKitWebContext* context = WEBKIT_WEB_CONTEXT(g_object_ref(shared_context));
+        GtkWidget* view = GTK_WIDGET(webkit_web_view_new_with_context(context));
+        g_object_unref(context);
+
+        WebKitSettings* settings = webkit_settings_new();
+        webkit_settings_set_hardware_acceleration_policy(settings,
+                                                        WEBKIT_HARDWARE_ACCELERATION_POLICY_ALWAYS);
+        webkit_settings_set_enable_smooth_scrolling(settings, FALSE);
+        webkit_settings_set_enable_webaudio(settings, FALSE);
+#if WEBKIT_CHECK_VERSION(2, 22, 0)
+        webkit_settings_set_enable_media_stream(settings, FALSE);
+#endif
+#if WEBKIT_CHECK_VERSION(2, 28, 0)
+        webkit_settings_set_enable_webrtc(settings, FALSE);
+#endif
+        webkit_web_view_set_settings(WEBKIT_WEB_VIEW(view), settings);
+        g_object_unref(settings);
+
+        GdkRGBA background = {0.06, 0.066, 0.094, 1.0};
+        webkit_web_view_set_background_color(WEBKIT_WEB_VIEW(view), &background);
+        return view;
+    };
+
+    GtkWidget* webview = configure_webview();
     g_signal_connect(webview, "decide-policy", G_CALLBACK(GtkApp::on_decide_policy), this);
 #if GTK_MAJOR_VERSION >= 4
     gtk_window_set_child(GTK_WINDOW(window), webview);
