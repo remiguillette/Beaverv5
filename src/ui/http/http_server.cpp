@@ -170,6 +170,38 @@ void HttpServerApp::handle_request(int client_socket) {
 
     constexpr const char* kHttpAssetPrefix = "/";
 
+    auto serve_public_asset = [&](const std::string& url_prefix, const char* content_type,
+                                  const char* cache_control, const char* not_found_message) {
+        if (path.rfind(url_prefix, 0) != 0) {
+            return false;
+        }
+
+        std::string relative_path = path.substr(url_prefix.size());
+        if (relative_path.empty() || relative_path.find("..") != std::string::npos) {
+            response.status_code = 400;
+            response.status_text = "Bad Request";
+            response.body = "Invalid asset path";
+            response.headers["Content-Type"] = "text/plain; charset=utf-8";
+            return true;
+        }
+
+        std::string file_path = "public" + path;
+        response.body = read_file(file_path);
+        if (response.body.empty()) {
+            response.status_code = 404;
+            response.status_text = "Not Found";
+            response.body = not_found_message;
+            response.headers["Content-Type"] = "text/plain; charset=utf-8";
+        } else {
+            response.headers["Content-Type"] = content_type;
+            if (cache_control != nullptr && cache_control[0] != '\0') {
+                response.headers["Cache-Control"] = cache_control;
+            }
+        }
+
+        return true;
+    };
+
     if (path == "/" || path == "/index.html") {
         response.body =
             manager_.to_html(language, kHttpAssetPrefix, MenuRouteMode::kHttpServer);
@@ -193,21 +225,17 @@ void HttpServerApp::handle_request(int client_socket) {
             response.status_code = 404;
             response.status_text = "Not Found";
             response.body = "CSS file not found";
+            response.headers["Content-Type"] = "text/plain; charset=utf-8";
         } else {
             response.headers["Content-Type"] = "text/css; charset=utf-8";
             response.headers["Cache-Control"] = "no-cache";
         }
-    } else if (request.path.rfind("/icons/", 0) == 0) {
-        std::string file_path = "public" + request.path;
-        response.body = read_file(file_path);
-        if (response.body.empty()) {
-            response.status_code = 404;
-            response.status_text = "Not Found";
-            response.body = "Icon not found";
-        } else {
-            response.headers["Content-Type"] = "image/svg+xml";
-            response.headers["Cache-Control"] = "public, max-age=86400";
-        }
+    } else if (serve_public_asset("/icons/", "image/svg+xml", "public, max-age=86400",
+                                   "Icon not found")) {
+        // Asset served.
+    } else if (serve_public_asset("/contact/", "image/svg+xml", "public, max-age=86400",
+                                   "Contact asset not found")) {
+        // Asset served.
     } else {
         response.status_code = 404;
         response.status_text = "Not Found";
