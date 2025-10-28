@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <sstream>
 
+#include "core/system_status.h"
 #include "ui/html_renderer.h"
 #include <glib.h>
 
@@ -18,7 +19,7 @@ AppManager::AppManager()
     : apps_({
           {"BeaverPhone", "violet", "icons/phone.svg",
            {"apps/beaverphone", "/apps/beaverphone"}},
-          {"BeaverSystem", "cyan", "icons/server.svg", {"", ""}},
+          {"BeaverSystem", "cyan", "icons/server.svg", {"apps/beaversystem", "/apps/beaversystem"}},
           {"BeaverAlarm", "amber", "icons/shield-alert.svg", {"", ""}},
           {"BeaverTask", "red", "icons/square-check-big.svg", {"", ""}},
           {"BeaverDoc", "green", "icons/file-text.svg", {"", ""}},
@@ -124,6 +125,38 @@ std::string AppManager::beaverphone_page_html(Language language,
                   language_to_string(language));
     } else {
         g_message("AppManager generated BeaverPhone HTML. language=%s bytes=%zu",
+                  language_to_string(language), html.size());
+    }
+    return html;
+}
+
+std::string AppManager::beaversystem_page_html() const {
+    return beaversystem_page_html(default_language_, BeaverSystemMenuLinkMode::kAbsoluteRoot);
+}
+
+std::string AppManager::beaversystem_page_html(Language language,
+                                               BeaverSystemMenuLinkMode menu_link_mode) const {
+    return beaversystem_page_html(language, "", menu_link_mode);
+}
+
+std::string AppManager::beaversystem_page_html(Language language,
+                                               const std::string& asset_prefix) const {
+    return beaversystem_page_html(language, asset_prefix,
+                                  BeaverSystemMenuLinkMode::kAbsoluteRoot);
+}
+
+std::string AppManager::beaversystem_page_html(Language language,
+                                               const std::string& asset_prefix,
+                                               BeaverSystemMenuLinkMode menu_link_mode) const {
+    SystemStatusSnapshot snapshot = collect_system_status();
+    std::string html = generate_beaversystem_dashboard_html(translation_catalog_, language,
+                                                            asset_prefix, menu_link_mode,
+                                                            snapshot);
+    if (html.empty()) {
+        g_warning("AppManager generated empty BeaverSystem HTML for language: %s",
+                  language_to_string(language));
+    } else {
+        g_message("AppManager generated BeaverSystem HTML. language=%s bytes=%zu",
                   language_to_string(language), html.size());
     }
     return html;
