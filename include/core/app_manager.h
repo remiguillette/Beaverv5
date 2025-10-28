@@ -25,10 +25,12 @@ public:
     std::string to_json() const;
     std::string to_json(Language language) const;
     std::string to_html() const;
-    std::string to_html(Language language, const std::string& asset_prefix = "") const;
+    std::string to_html(Language language) const;
+    std::string to_html(Language language, const std::string& asset_prefix) const;
     std::string beaverphone_page_html() const;
+    std::string beaverphone_page_html(Language language) const;
     std::string beaverphone_page_html(Language language,
-                                      const std::string& asset_prefix = "") const;
+                                      const std::string& asset_prefix) const;
 
 private:
     std::vector<AppTile> apps_;
