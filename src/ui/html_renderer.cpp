@@ -867,7 +867,7 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     const std::string zoom_out_label = translations.translate("Zoom out", language);
     const std::string stop_motion_label = translations.translate("Stop motion", language);
     const std::string configure_cctv_label = translations.translate(
-        "Configure CCTV environment variables to enable the feed.", language);
+        "Update CCTV connection details to enable the feed.", language);
     const CctvConfig cctv_config = load_cctv_config_from_env();
     const bool ptz_ready = cctv_config.ptz_is_ready();
     const std::string rtsp_preview = cctv_config.rtsp_uri(false);

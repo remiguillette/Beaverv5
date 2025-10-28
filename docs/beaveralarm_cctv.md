@@ -10,24 +10,21 @@ This document explains how to configure the camera credentials securely, run the
   feed using the FFmpeg toolchain (which relies on `libavformat`). The BeaverAlarm frontend loads the playlist URL exposed by the
   backend configuration and falls back to `hls.js` if the browser lacks native HLS playback.
 
-## 2. Environment variables
+## 2. Connection details
 
-Credentials and network information stay outside of the repository. Copy `.env.example` to `.env` and update the values:
+BeaverAlarm now ships with baked-in CCTV settings so the demo camera works out of the box. The defaults live in
+`src/core/cctv_config.cpp` and resolve to the following values:
 
-```bash
-cp .env.example .env
-```
-
-| Variable | Description |
+| Setting | Value |
 | --- | --- |
-| `BEAVER_ALARM_CCTV_HOST` | IP or hostname of the camera (e.g. `192.168.1.47`). |
-| `BEAVER_ALARM_CCTV_RTSP_PATH` | RTSP path segment reported by the camera (`cam/realmonitor?channel=1&subtype=1`). |
-| `BEAVER_ALARM_CCTV_USERNAME` / `BEAVER_ALARM_CCTV_PASSWORD` | (Optional) Credentials used exclusively for ONVIF PTZ calls. Leave blank for anonymous RTSP playback. |
-| `BEAVER_ALARM_ONVIF_PATH` | ONVIF PTZ control path (defaults to `onvif/ptz_service`). |
-| `BEAVER_ALARM_ONVIF_PROFILE` | Profile token to target when sending PTZ commands (`Profile_1`, etc.). |
-| `BEAVER_ALARM_HLS_URL` | Publicly reachable URL of the generated `.m3u8` playlist. |
+| RTSP URI | `rtsp://admin:MC44rg99qc%40@192.168.1.47:554/cam/realmonitor?channel=1&subtype=1` |
+| Camera host | `192.168.1.47` |
+| PTZ credentials | `admin` / `MC44rg99qc@` |
+| ONVIF path | `onvif/ptz_service` |
+| ONVIF profile token | `Profile_1` |
+| HLS playlist URL | `http://localhost:8080/streams/beaveralarm/index.m3u8` |
 
-> **Note:** `.env` is git-ignored to prevent accidental credential leaks.
+Adjust those constants directly in `load_cctv_config_from_env()` if your network uses a different address or credentials.
 
 ## 3. Producing the HLS stream (FFmpeg / libavformat)
 
@@ -36,13 +33,13 @@ consumes:
 
 ```bash
 ffmpeg -rtsp_transport tcp \
-  -i "rtsp://${BEAVER_ALARM_CCTV_USERNAME}:${BEAVER_ALARM_CCTV_PASSWORD}@${BEAVER_ALARM_CCTV_HOST}/${BEAVER_ALARM_CCTV_RTSP_PATH}" \
+  -i "rtsp://admin:MC44rg99qc%40@192.168.1.47:554/cam/realmonitor?channel=1&subtype=1" \
   -c:v copy -c:a aac -f hls \
   -hls_time 2 -hls_list_size 6 -hls_flags delete_segments+program_date_time \
   /var/www/html/streams/beaveralarm/index.m3u8
 ```
 
-If your RTSP feed is public, you can skip credentials entirely and point FFmpeg at the
+If your RTSP feed is public, you can remove the credentials segment entirely and point FFmpeg at the
 direct URI reported by the camera, for example:
 
 ```bash
@@ -54,7 +51,8 @@ ffmpeg -rtsp_transport tcp \
 ```
 
 Serve the resulting directory (`/var/www/html/streams/beaveralarm/`) over HTTPS or behind an authenticated gateway so that
-`BEAVER_ALARM_HLS_URL` points to a reachable playlist, e.g. `https://kiosk.local/streams/beaveralarm/index.m3u8`.
+the configured playlist URL (`http://localhost:8080/streams/beaveralarm/index.m3u8` by default) points to a reachable resource
+for the kiosk.
 
 ## 4. PTZ REST API
 
@@ -88,7 +86,7 @@ camera wiring without exposing secrets in the HTML markup.
 
 ## 7. Troubleshooting checklist
 
-1. Confirm `.env` contains the latest host, optional PTZ credentials, and HLS URL.
+1. Confirm the values baked into `src/core/cctv_config.cpp` match your camera's host, credentials, and playlist URL.
 2. Ensure the FFmpeg process is reachable from the kiosk (playlist served over HTTP/HTTPS).
 3. Verify ONVIF credentials by cURLing the PTZ endpoint manually (e.g. `curl -u admin:change-me http://<camera>/onvif/ptz_service`).
 4. Watch the kiosk logs for messages starting with `PTZ` to confirm SOAP commands are acknowledged by the camera.
