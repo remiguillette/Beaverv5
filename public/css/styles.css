@@ -56,10 +56,11 @@ body {
 .lang-toggle {
   display: inline-flex;
   gap: 0.5rem;
-  background: rgba(24, 24, 32, 0.6);
+  background: rgba(248, 148, 34, 0.14);
   padding: 4px 5px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(248, 148, 34, 0.35);
+  box-shadow: 0 0 0 1px rgba(248, 148, 34, 0.18);
   margin-left: auto;
 }
 
@@ -91,7 +92,7 @@ body {
 .lang-toggle__button {
   border: none;
   background: transparent;
-  color: #c1c1d0;
+  color: rgba(248, 148, 34, 0.75);
   font-weight: 600;
   font-size: 13px;
   padding: 4px 9px;
@@ -102,13 +103,13 @@ body {
 }
 
 .lang-toggle__button--active {
-  background: rgba(91, 229, 245, 0.16);
-  color: #5be5f5;
-  box-shadow: 0 0 0 1px rgba(91, 229, 245, 0.35);
+  background: rgba(248, 148, 34, 0.24);
+  color: var(--text-main);
+  box-shadow: 0 0 0 1px rgba(248, 148, 34, 0.45);
 }
 
 .lang-toggle__button:hover {
-  color: #f2f2f7;
+  color: var(--accent-amber);
 }
 
 .menu-header__title {
