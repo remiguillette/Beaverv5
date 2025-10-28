@@ -105,7 +105,7 @@ constexpr std::array<ExtensionContact, 4> kExtensionContacts = {{
      "Direct line",
      "Bureau des plaintes",
      "Complaints Office",
-     "22"},
+     "0022"},
     {"serviceOntario",
      "Services Ontario",
      "Services Ontario",
@@ -255,9 +255,15 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     const std::string dialpad_label = translations.translate("Dialpad", language);
     const std::string enter_number = translations.translate("Enter a number", language);
     const std::string call_label = translations.translate("Call", language);
+    const std::string clear_label = translations.translate("Clear", language);
     const std::string description = translations.translate("BeaverPhone description", language);
     const std::string extensions_title = translations.translate("Phone extensions", language);
     const std::string extension_prefix = translations.translate("Extension prefix", language);
+    const std::string connection_connected = translations.translate("Connected", language);
+    const std::string connection_disconnected =
+        translations.translate("Not connected", language);
+    const std::string connection_connecting =
+        translations.translate("Connection in progress", language);
     const std::string back_to_menu = translations.translate("Back to menu", language);
     const std::string language_label = translations.translate("Language selection", language);
     const std::string switch_to_french = translations.translate("Switch to French", language);
@@ -301,17 +307,32 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "      </header>\n";
     html << "      <main class=\"phone-main\">\n";
     html << "        <section class=\"dialpad-card\" aria-labelledby=\"dialpad-title\">\n";
-    html << "          <h2 id=\"dialpad-title\" class=\"dialpad-title\">" << dialpad_label
+    html << "          <div class=\"dialpad-title-bar\">\n";
+    html << "            <h2 id=\"dialpad-title\" class=\"dialpad-title\">" << dialpad_label
          << "</h2>\n";
-    html << "          <div class=\"dialpad-display\" aria-live=\"polite\" aria-atomic=\"true\">\n";
-    html << "            <span class=\"dialpad-display__placeholder\">" << enter_number
+    html << "            <div class=\"connection-indicator\" role=\"status\" aria-live=\"polite\""
+         << " data-status=\"disconnected\""
+         << " data-label-connected=\"" << connection_connected << "\""
+         << " data-label-connecting=\"" << connection_connecting << "\""
+         << " data-label-disconnected=\"" << connection_disconnected << "\"">\n";
+    html << "              <span class=\"connection-indicator__dot\" aria-hidden=\"true\"></span>\n";
+    html << "              <span class=\"connection-indicator__label\">" << connection_disconnected
          << "</span>\n";
+    html << "            </div>\n";
+    html << "          </div>\n";
+    html << "          <div class=\"dialpad-display is-empty\" aria-live=\"polite\" aria-atomic=\"true\""
+         << " data-placeholder=\"" << enter_number << "\">\n";
+    html << "            <span class=\"dialpad-display__value\">" << enter_number << "</span>\n";
     html << "          </div>\n";
     html << "          <div class=\"dialpad-grid\" role=\"group\" aria-label=\"" << dialpad_label
          << "\">\n";
 
     for (const auto& key : kDialpadKeys) {
-        html << "            <button type=\"button\" class=\"dialpad-key\">\n";
+        html << "            <button type=\"button\" class=\"dialpad-key\"";
+        if (key.symbol[0] != '\0' && std::isdigit(static_cast<unsigned char>(key.symbol[0]))) {
+            html << " data-digit=\"" << key.symbol << "\"";
+        }
+        html << ">\n";
         html << "              <span class=\"dialpad-key__symbol\">" << key.symbol
              << "</span>\n";
         html << "              <span class=\"dialpad-key__letters\">";
@@ -325,8 +346,20 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     }
 
     html << "          </div>\n";
-    html << "          <button type=\"button\" class=\"dialpad-call-button\">" << call_label
-         << "</button>\n";
+    html << "          <div class=\"dialpad-actions\">\n";
+    html << "            <button type=\"button\" class=\"dialpad-action dialpad-action--clear\""
+         << " data-action=\"clear\">" << clear_label << "</button>\n";
+    html << "            <button type=\"button\" class=\"dialpad-call-button\""
+         << " data-action=\"call\" aria-label=\"" << call_label << "\">\n";
+    html << "              <span class=\"dialpad-call-button__icon\" aria-hidden=\"true\">\n";
+    html << "                <svg viewBox=\"0 0 24 24\" focusable=\"false\" aria-hidden=\"true\">\n";
+    html << "                  <path d=\"M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.05"
+         << " 11.05 0 003.46.55 1 1 0 011 1V20a1 1 0 01-1 1 16 16 0 01-16-16 1 1 0 011-1h3.5a1 1 0 011 1"
+         << " 11.05 11.05 0 00.55 3.46 1 1 0 01-.24 1.01l-2.2 2.2z\" fill=\"currentColor\"/>\n";
+    html << "                </svg>\n";
+    html << "            </span>\n";
+    html << "            </button>\n";
+    html << "          </div>\n";
     html << "        </section>\n";
     html << "        <aside class=\"dialpad-details\">\n";
     html << "          <p class=\"dialpad-description\">" << description << "</p>\n";
@@ -341,6 +374,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
             language == Language::French ? contact.details_fr : contact.details_en;
 
         html << "            <article class=\"extension-card\" data-extension-id=\"" << contact.id
+             << "\" data-extension-value=\"" << contact.extension
              << "\">\n";
         const std::string initial = contact_initial(contact, language);
         html << "              <span class=\"extension-card__avatar\" aria-hidden=\"true\">" << initial
@@ -364,6 +398,112 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "      </main>\n";
     html << "    </div>\n";
     html << "  </div>\n";
+    html << R"(    <script>
+      (function() {
+        const displayWrapper = document.querySelector('.dialpad-display');
+        const displayValue = document.querySelector('.dialpad-display__value');
+        const placeholder = displayWrapper ? displayWrapper.getAttribute('data-placeholder') || '' : '';
+        const callButton = document.querySelector('.dialpad-call-button');
+        const clearButton = document.querySelector('.dialpad-action--clear');
+        const maxPhoneLength = 10;
+        const maxExtensionLength = 4;
+        let digits = '';
+
+        const formatDigits = (value) => {
+          if (value.length <= maxExtensionLength) {
+            return value;
+          }
+          const area = value.slice(0, 3);
+          const central = value.slice(3, 6);
+          const line = value.slice(6, maxPhoneLength);
+          if (value.length <= 6) {
+            return `(${area})-${central}`;
+          }
+          return `(${area})-${central}-${line}`;
+        };
+
+        const isValidNumber = (value) => value.length === maxPhoneLength || value.length === maxExtensionLength;
+
+        const updateCallButtonState = () => {
+          if (!callButton) {
+            return;
+          }
+          callButton.disabled = !isValidNumber(digits);
+        };
+
+        const updateDisplay = () => {
+          if (!displayWrapper || !displayValue) {
+            return;
+          }
+          if (!digits.length) {
+            displayWrapper.classList.add('is-empty');
+            displayValue.textContent = placeholder;
+          } else {
+            displayWrapper.classList.remove('is-empty');
+            displayValue.textContent = formatDigits(digits);
+          }
+          updateCallButtonState();
+        };
+
+        const appendDigit = (digit) => {
+          if (!/\d/.test(digit)) {
+            return;
+          }
+          if (digits.length >= maxPhoneLength) {
+            return;
+          }
+          digits += digit;
+          updateDisplay();
+        };
+
+        const clearDigits = () => {
+          digits = '';
+          updateDisplay();
+        };
+
+        const setDigits = (value, isExtension = false) => {
+          const sanitized = (value || '').replace(/\D/g, '');
+          digits = isExtension ? sanitized.slice(0, maxExtensionLength) : sanitized.slice(0, maxPhoneLength);
+          updateDisplay();
+        };
+
+        document.querySelectorAll('.dialpad-key').forEach((button) => {
+          button.addEventListener('click', () => {
+            const digit = button.getAttribute('data-digit');
+            if (!digit) {
+              return;
+            }
+            appendDigit(digit);
+          });
+        });
+
+        document.querySelectorAll('.extension-card').forEach((card) => {
+          card.addEventListener('click', () => {
+            const extension = card.getAttribute('data-extension-value');
+            setDigits(extension, true);
+          });
+        });
+
+        if (clearButton) {
+          clearButton.addEventListener('click', () => {
+            clearDigits();
+            clearButton.blur();
+          });
+        }
+
+        if (callButton) {
+          callButton.addEventListener('click', () => {
+            if (callButton.disabled) {
+              return;
+            }
+            window.dispatchEvent(new CustomEvent('beaverphone:call', { detail: { digits } }));
+          });
+        }
+
+        updateDisplay();
+      })();
+    </script>
+)";
     html << "</body>\n";
     html << "</html>\n";
 
