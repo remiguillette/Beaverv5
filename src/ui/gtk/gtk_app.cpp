@@ -29,6 +29,20 @@ namespace {
 std::string build_base_uri() {
     namespace fs = std::filesystem;
     fs::path public_dir = fs::current_path() / "public";
+    static bool reported_missing_public_dir = false;
+    static bool reported_public_dir = false;
+
+    if (!fs::exists(public_dir)) {
+        if (!reported_missing_public_dir) {
+            g_warning("GtkApp could not find public assets directory: %s",
+                      public_dir.string().c_str());
+            reported_missing_public_dir = true;
+        }
+    } else if (!reported_public_dir) {
+        g_message("GtkApp using public assets directory: %s", public_dir.string().c_str());
+        reported_public_dir = true;
+    }
+
     std::string uri = "file://" + public_dir.string();
     if (!uri.empty() && uri.back() != '/') {
         uri.push_back('/');
@@ -111,7 +125,10 @@ void GtkApp::build_ui(GtkApplication* application) {
     gtk_container_add(GTK_CONTAINER(window), webview);
 #endif
 
-    load_language(WEBKIT_WEB_VIEW(webview), manager_.get_default_language());
+    Language initial_language = manager_.get_default_language();
+    g_message("GtkApp building UI with initial language: %s",
+              language_to_string(initial_language));
+    load_language(WEBKIT_WEB_VIEW(webview), initial_language);
 
 #if GTK_MAJOR_VERSION >= 4
     gtk_window_present(GTK_WINDOW(window));
@@ -155,7 +172,8 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 
     std::string normalized_path = normalize_navigation_path(path_string);
 
-    g_message("GtkApp navigating to: %s", normalized_path.c_str());
+    g_message("GtkApp navigation request: path=%s query=%s", normalized_path.c_str(),
+              query_string.c_str());
 
     if (normalized_path.empty()) {
         return FALSE;
@@ -166,6 +184,10 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     const bool navigating_to_menu =
         (normalized_path == "/" || normalized_path == "/index.html");
     const bool navigating_to_beaverphone = (normalized_path == "/apps/beaverphone");
+
+    g_message("GtkApp resolved navigation target. menu=%s beaverphone=%s language=%s",
+              navigating_to_menu ? "true" : "false",
+              navigating_to_beaverphone ? "true" : "false", language_to_string(language));
 
     if (!navigating_to_menu && !navigating_to_beaverphone) {
         return FALSE;
@@ -178,6 +200,12 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     } else if (navigating_to_beaverphone) {
         std::string html = self->manager_.beaverphone_page_html(language);
         std::string base_uri = build_base_uri();
+        g_message("GtkApp loading BeaverPhone page. language=%s html_bytes=%zu base_uri=%s",
+                  language_to_string(language), html.size(), base_uri.c_str());
+        if (html.empty()) {
+            g_warning("GtkApp received empty BeaverPhone HTML for language: %s",
+                      language_to_string(language));
+        }
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
     }
 
@@ -188,5 +216,11 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
     std::string html = manager_.to_html(language);
     std::string base_uri = build_base_uri();
+    g_message("GtkApp loading menu page. language=%s html_bytes=%zu base_uri=%s",
+              language_to_string(language), html.size(), base_uri.c_str());
+    if (html.empty()) {
+        g_warning("GtkApp received empty menu HTML for language: %s",
+                  language_to_string(language));
+    }
     webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
 }

@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "ui/html_renderer.h"
+#include <glib.h>
 
 namespace {
 std::string locale_directory() {
@@ -15,7 +16,7 @@ std::string locale_directory() {
 
 AppManager::AppManager()
     : apps_({
-          {"BeaverPhone", "violet", "icons/phone.svg", "/apps/beaverphone"},
+          {"BeaverPhone", "violet", "icons/phone.svg", "apps/beaverphone"},
           {"BeaverSystem", "cyan", "icons/server.svg", ""},
           {"BeaverAlarm", "amber", "icons/shield-alert.svg", ""},
           {"BeaverTask", "red", "icons/square-check-big.svg", ""},
@@ -23,7 +24,10 @@ AppManager::AppManager()
           {"BeaverDebian", "violet", "icons/server-cog.svg", ""},
           {"BeaverNet", "amber", "icons/chromium.svg", ""}}),
       default_language_(Language::French),
-      translation_catalog_(locale_directory()) {}
+      translation_catalog_(locale_directory()) {
+    g_message("AppManager initialized with %zu apps. default_language=%s", apps_.size(),
+              language_to_string(default_language_));
+}
 
 const std::vector<AppTile>& AppManager::get_available_apps() const {
     return apps_;
@@ -31,6 +35,7 @@ const std::vector<AppTile>& AppManager::get_available_apps() const {
 
 void AppManager::set_default_language(Language language) {
     default_language_ = language;
+    g_message("AppManager default language set to %s", language_to_string(language));
 }
 
 Language AppManager::get_default_language() const {
@@ -71,7 +76,15 @@ std::string AppManager::to_json(Language language) const {
 }
 
 std::string AppManager::to_html(Language language) const {
-    return generate_menu_page_html(apps_, translation_catalog_, language);
+    std::string html = generate_menu_page_html(apps_, translation_catalog_, language);
+    if (html.empty()) {
+        g_warning("AppManager generated empty menu HTML for language: %s",
+                  language_to_string(language));
+    } else {
+        g_message("AppManager generated menu HTML. language=%s bytes=%zu",
+                  language_to_string(language), html.size());
+    }
+    return html;
 }
 
 std::string AppManager::beaverphone_page_html() const {
@@ -79,5 +92,13 @@ std::string AppManager::beaverphone_page_html() const {
 }
 
 std::string AppManager::beaverphone_page_html(Language language) const {
-    return generate_beaverphone_dialpad_html(translation_catalog_, language);
+    std::string html = generate_beaverphone_dialpad_html(translation_catalog_, language);
+    if (html.empty()) {
+        g_warning("AppManager generated empty BeaverPhone HTML for language: %s",
+                  language_to_string(language));
+    } else {
+        g_message("AppManager generated BeaverPhone HTML. language=%s bytes=%zu",
+                  language_to_string(language), html.size());
+    }
+    return html;
 }
