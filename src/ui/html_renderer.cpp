@@ -1,6 +1,7 @@
 #include "ui/html_renderer.h"
 
 #include <array>
+#include <cctype>
 #include <sstream>
 
 #include "core/translation_catalog.h"
@@ -68,6 +69,62 @@ constexpr std::array<DialpadKey, 12> kDialpadKeys = {{{"1", ""},
                                                        {"*", ""},
                                                        {"0", "+"},
                                                        {"#", ""}}};
+
+struct ExtensionContact {
+    const char* id;
+    const char* name_fr;
+    const char* name_en;
+    const char* subtitle_fr;
+    const char* subtitle_en;
+    const char* details_fr;
+    const char* details_en;
+    const char* extension;
+};
+
+constexpr std::array<ExtensionContact, 4> kExtensionContacts = {
+    {{{"opp",
+       "Police provinciale de l’Ontario",
+       "Ontario Provincial Police",
+       "Ligne interne",
+       "Internal line",
+       "Bureau 101",
+       "Office 101",
+       "1201"}},
+     {{"spca",
+       "SPCA Niagara",
+       "SPCA Niagara",
+       "Programme Paws Law",
+       "Paws Law program",
+       "Bureau 3434",
+       "Office 3434",
+       "3434"}},
+     {{"mom",
+       "Maman",
+       "Mom",
+       "Contact direct",
+       "Direct line",
+       "Bureau des plaintes",
+       "Complaints Office",
+       "22"}},
+     {{"serviceOntario",
+       "Services Ontario",
+       "Services Ontario",
+       "Gouvernement de l’Ontario",
+       "Government of Ontario",
+       "Poste *1345",
+       "Desktop *1345",
+       "1345"}}}};
+
+std::string contact_initial(const ExtensionContact& contact, Language language) {
+    const char* name = language == Language::French ? contact.name_fr : contact.name_en;
+    if (!name || name[0] == '\0') {
+        return "";
+    }
+
+    const unsigned char first = static_cast<unsigned char>(name[0]);
+    const char initial = static_cast<char>(std::toupper(first));
+    return std::string(1, initial);
+}
 }  // namespace
 
 std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog& translations,
@@ -180,6 +237,8 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     const std::string enter_number = translations.translate("Enter a number", language);
     const std::string call_label = translations.translate("Call", language);
     const std::string description = translations.translate("BeaverPhone description", language);
+    const std::string extensions_title = translations.translate("Phone extensions", language);
+    const std::string extension_prefix = translations.translate("Extension prefix", language);
     const std::string back_to_menu = translations.translate("Back to menu", language);
     const std::string language_label = translations.translate("Language selection", language);
     const std::string switch_to_french = translations.translate("Switch to French", language);
@@ -215,6 +274,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << language_toggle_button("EN", beaverphone_english_href, switch_to_english,
                                    language == Language::English);
     html << "        </nav>\n";
+    html << "        <div class=\"phone-header__accent\" aria-hidden=\"true\"></div>\n";
     html << "      </header>\n";
     html << "      <main class=\"phone-main\">\n";
     html << "        <section class=\"dialpad-card\" aria-labelledby=\"dialpad-title\">\n";
@@ -247,6 +307,36 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "        </section>\n";
     html << "        <aside class=\"dialpad-details\">\n";
     html << "          <p class=\"dialpad-description\">" << description << "</p>\n";
+    html << "          <h2 class=\"extensions-title\">" << extensions_title << "</h2>\n";
+    html << "          <div class=\"extension-list\">\n";
+
+    for (const auto& contact : kExtensionContacts) {
+        const std::string name = language == Language::French ? contact.name_fr : contact.name_en;
+        const std::string subtitle =
+            language == Language::French ? contact.subtitle_fr : contact.subtitle_en;
+        const std::string details =
+            language == Language::French ? contact.details_fr : contact.details_en;
+
+        html << "            <article class=\"extension-card\" data-extension-id=\"" << contact.id
+             << "\">\n";
+        const std::string initial = contact_initial(contact, language);
+        html << "              <span class=\"extension-card__avatar\" aria-hidden=\"true\">" << initial
+             << "</span>\n";
+        html << "              <div class=\"extension-card__content\">\n";
+        html << "                <h3 class=\"extension-card__name\">" << name << "</h3>\n";
+        html << "                <p class=\"extension-card__subtitle\">" << subtitle << "</p>\n";
+        html << "                <p class=\"extension-card__details\">" << details << "</p>\n";
+        html << "              </div>\n";
+        html << "              <div class=\"extension-card__extension\">\n";
+        html << "                <span class=\"extension-card__extension-label\">" << extension_prefix
+             << "</span>\n";
+        html << "                <span class=\"extension-card__extension-value\">" << contact.extension
+             << "</span>\n";
+        html << "              </div>\n";
+        html << "            </article>\n";
+    }
+
+    html << "          </div>\n";
     html << "        </aside>\n";
     html << "      </main>\n";
     html << "    </div>\n";
