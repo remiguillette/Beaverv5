@@ -3,18 +3,23 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
 
 #include <webkit2/webkit2.h>
+#if WEBKIT_CHECK_VERSION(2, 40, 0)
+#include <JavaScriptCore/JavaScript.h>
+#endif
 #include <gdk/gdk.h>
 #include <glib.h>
 
 GtkApp::GtkApp(AppManager& manager) : manager_(manager) {}
 
 int GtkApp::run(int argc, char** argv) {
-    GtkApplication* application = gtk_application_new("com.beaver.kiosk", G_APPLICATION_FLAGS_NONE);
+    GtkApplication* application =
+        gtk_application_new("com.beaver.kiosk", G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(application, "activate", G_CALLBACK(GtkApp::on_activate), this);
 
     int status = g_application_run(G_APPLICATION(application), argc, argv);
@@ -486,9 +491,6 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     const WebKitNavigationType navigation_type =
         webkit_navigation_action_get_navigation_type(action);
     const gboolean is_user_gesture = webkit_navigation_action_is_user_gesture(action);
-    const guint mouse_button = webkit_navigation_action_get_mouse_button(action);
-    const guint modifiers = webkit_navigation_action_get_modifiers(action);
-
     // When we call webkit_web_view_load_html the web view performs an internal
     // navigation to the provided base URI. Those navigations are reported with
     // type "other" and without a user gesture. If we intercept them we end up
@@ -648,7 +650,12 @@ void GtkApp::ensure_remote_navigation_controls(WebKitWebView* web_view) {
     }
 
     g_message("GtkApp injecting remote navigation controls.");
+#if WEBKIT_CHECK_VERSION(2, 40, 0)
+    webkit_web_view_evaluate_javascript(web_view, kRemoteBackButtonScript, -1, nullptr, nullptr,
+                                        nullptr);
+#else
     webkit_web_view_run_javascript(web_view, kRemoteBackButtonScript, nullptr, nullptr, nullptr);
+#endif
 }
 
 void GtkApp::remove_remote_navigation_controls(WebKitWebView* web_view) {
@@ -657,8 +664,13 @@ void GtkApp::remove_remote_navigation_controls(WebKitWebView* web_view) {
     }
 
     g_message("GtkApp removing remote navigation controls.");
+#if WEBKIT_CHECK_VERSION(2, 40, 0)
+    webkit_web_view_evaluate_javascript(web_view, kRemoveRemoteBackButtonScript, -1, nullptr,
+                                        nullptr, nullptr);
+#else
     webkit_web_view_run_javascript(web_view, kRemoveRemoteBackButtonScript, nullptr, nullptr,
                                    nullptr);
+#endif
 }
 
 void GtkApp::handle_remote_go_home() {
@@ -713,15 +725,57 @@ void GtkApp::on_script_message_received(WebKitUserContentManager* /*content_mana
         return;
     }
 
-    gchar* value = webkit_javascript_result_to_string(result);
-    if (value == nullptr) {
+    const auto message = [&result]() -> std::optional<std::string> {
+        if (result == nullptr) {
+            return std::nullopt;
+        }
+
+#if WEBKIT_CHECK_VERSION(2, 40, 0)
+        JSGlobalContextRef context = webkit_javascript_result_get_global_context(result);
+        JSValueRef value_ref = webkit_javascript_result_get_value(result);
+        if (context == nullptr || value_ref == nullptr) {
+            return std::nullopt;
+        }
+
+        JSStringRef js_string = JSValueToStringCopy(context, value_ref, nullptr);
+        if (js_string == nullptr) {
+            return std::nullopt;
+        }
+
+        const size_t maximum_size = JSStringGetMaximumUTF8CStringSize(js_string);
+        std::string buffer;
+        buffer.resize(maximum_size);
+        const size_t written = JSStringGetUTF8CString(js_string, buffer.data(), maximum_size);
+        JSStringRelease(js_string);
+
+        if (written == 0) {
+            return std::nullopt;
+        }
+
+        buffer.resize(written - 1);  // Exclude trailing null terminator.
+        return buffer;
+#else
+        const auto g_free_deleter = [](gchar* ptr) {
+            if (ptr != nullptr) {
+                g_free(ptr);
+            }
+        };
+
+        using GCharPtr = std::unique_ptr<gchar, decltype(g_free_deleter)>;
+
+        GCharPtr value(webkit_javascript_result_to_string(result), g_free_deleter);
+        if (!value) {
+            return std::nullopt;
+        }
+        return std::string(value.get());
+#endif
+    }();
+
+    if (!message.has_value()) {
         return;
     }
 
-    std::string message(value);
-    g_free(value);
-
-    if (message == "go-home") {
+    if (*message == "go-home") {
         self->handle_remote_go_home();
     }
 }
