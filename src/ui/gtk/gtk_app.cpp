@@ -360,6 +360,18 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         return FALSE;
     }
 
+    const gchar* scheme = g_uri_get_scheme(parsed_uri);
+    std::string scheme_string = scheme != nullptr ? scheme : "";
+    std::transform(scheme_string.begin(), scheme_string.end(), scheme_string.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+
+    if (!scheme_string.empty() && scheme_string != "file") {
+        g_message("GtkApp allowing external navigation. uri=%s scheme=%s", uri,
+                  scheme_string.c_str());
+        g_uri_unref(parsed_uri);
+        return FALSE;
+    }
+
     const gchar* path = g_uri_get_path(parsed_uri);
     const gchar* query = g_uri_get_query(parsed_uri);
 
@@ -387,8 +399,11 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 
     self->manager_.set_default_language(language);
 
+    bool handled_navigation = false;
+
     if (navigating_to_menu) {
         self->load_language(web_view, language);
+        handled_navigation = true;
     } else if (navigating_to_beaverphone) {
         std::string html = self->manager_.beaverphone_page_html(
             language, BeaverphoneMenuLinkMode::kRelativeIndex);
@@ -398,6 +413,7 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
                       language_to_string(language));
         }
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+        handled_navigation = true;
     } else if (navigating_to_beaversystem) {
         std::string html = self->manager_.beaversystem_page_html(
             language, BeaverSystemMenuLinkMode::kRelativeIndex);
@@ -407,6 +423,11 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
                       language_to_string(language));
         }
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+        handled_navigation = true;
+    }
+
+    if (!handled_navigation) {
+        return FALSE;
     }
 
     webkit_policy_decision_ignore(decision);

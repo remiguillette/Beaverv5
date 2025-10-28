@@ -42,6 +42,8 @@ public:
     void set_default_language(Language language);
     Language get_default_language() const;
 
+    void set_app_routes(const std::string& app_name, const AppRoutes& routes);
+
     std::string to_json() const;
     std::string to_json(Language language) const;
     std::string to_html() const;
