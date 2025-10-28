@@ -865,15 +865,14 @@ std::string generate_beaversystem_dashboard_html(const TranslationCatalog& trans
     append("  <div id=\"root\">");
     append("    <div class=\"beaversystem-root\">");
     append("      <header class=\"system-header\">");
-    append("        <a class=\"system-header__back\" href=\"" + menu_href + "\">");
-    append("          <span class=\"system-header__back-icon\" aria-hidden=\"true\">&larr;</span>");
-    append("          <span class=\"system-header__back-label\">" + html_escape(back_to_menu) + "</span>");
-    append("        </a>");
+    append("        <a class=\"system-header__back\" href=\"" + menu_href + "\">" +
+           html_escape(back_to_menu) + "</a>");
     append("        <h1 class=\"system-header__title\">" + html_escape(beaversystem_label) + "</h1>");
     append("        <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" + html_escape(language_label) + "\">");
     append(language_toggle_button("FR", beaversystem_french_href, switch_to_french, language == Language::French));
     append(language_toggle_button("EN", beaversystem_english_href, switch_to_english, language == Language::English));
     append("        </nav>");
+    append("        <div class=\"system-header__accent\" aria-hidden=\"true\"></div>");
     append("      </header>");
     append("      <main class=\"system-dashboard\"");
     append("            data-label-unavailable=\"" + html_escape(unavailable_label) + "\"");
