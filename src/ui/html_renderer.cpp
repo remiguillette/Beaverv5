@@ -143,9 +143,9 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     const std::string switch_to_french = translations.translate("Switch to French", language);
     const std::string switch_to_english = translations.translate("Switch to English", language);
 
-    const std::string menu_href = language == Language::French ? "/?lang=fr" : "/?lang=en";
-    const std::string beaverphone_french_href = "/apps/beaverphone?lang=fr";
-    const std::string beaverphone_english_href = "/apps/beaverphone?lang=en";
+    const std::string menu_href = language == Language::French ? "?lang=fr" : "?lang=en";
+    const std::string beaverphone_french_href = "apps/beaverphone?lang=fr";
+    const std::string beaverphone_english_href = "apps/beaverphone?lang=en";
 
     html << "<!DOCTYPE html>\n";
     html << "<html lang=\"" << lang_code << "\">\n";
@@ -156,7 +156,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
     html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
     html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
-    html << "  <link rel=\"stylesheet\" href=\"/css/styles.css\" />\n";
+    html << "  <link rel=\"stylesheet\" href=\"css/styles.css\" />\n";
     html << "</head>\n";
     html << "<body>\n";
     html << "  <div id=\"root\">\n";

@@ -5,6 +5,8 @@
 #include <fstream>
 #include <utility>
 
+#include <glib.h>
+
 TranslationCatalog::TranslationCatalog(std::string locales_directory)
     : translations_({{Language::English, load_language_file(locales_directory, "en")},
                      {Language::French, load_language_file(locales_directory, "fr")}}) {}
@@ -39,10 +41,12 @@ TranslationCatalog::TranslationMap TranslationCatalog::load_language_file(
     const fs::path file_path = fs::path(locales_directory) / language_code / "strings.txt";
     std::ifstream file(file_path);
     if (!file.is_open()) {
+        g_warning("TranslationCatalog could not open locale file: %s", file_path.string().c_str());
         return translations;
     }
 
     std::string line;
+    std::size_t inserted = 0;
     while (std::getline(file, line)) {
         const std::size_t comment_position = line.find('#');
         if (comment_position != std::string::npos) {
@@ -58,8 +62,12 @@ TranslationCatalog::TranslationMap TranslationCatalog::load_language_file(
         std::string value = trim(line.substr(separator_position + 1));
         if (!key.empty()) {
             translations[std::move(key)] = std::move(value);
+            ++inserted;
         }
     }
+
+    g_message("TranslationCatalog loaded %zu entries for language '%s' from %s", inserted,
+              language_code.c_str(), file_path.string().c_str());
 
     return translations;
 }
