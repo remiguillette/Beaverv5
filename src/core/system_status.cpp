@@ -5,6 +5,7 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <ctime>
 #include <exception>
 #include <filesystem>
@@ -417,6 +418,37 @@ std::string optional_double(double value, int precision = 2) {
     return format_double(value, precision);
 }
 
+std::optional<std::uint16_t> parse_port_env(const char* name) {
+    const char* value = std::getenv(name);
+    if (!value || *value == '\0') {
+        return std::nullopt;
+    }
+    char* end = nullptr;
+    const long parsed = std::strtol(value, &end, 10);
+    if (end == value || (end && *end != '\0')) {
+        return std::nullopt;
+    }
+    if (parsed <= 0 || parsed > 65535) {
+        return std::nullopt;
+    }
+    return static_cast<std::uint16_t>(parsed);
+}
+
+std::string build_websocket_address(std::uint16_t port) {
+    if (const char* explicit_address = std::getenv("BEAVER_WS_ADDRESS"); explicit_address && *explicit_address) {
+        return std::string(explicit_address);
+    }
+
+    std::string host = "localhost";
+    if (const char* host_env = std::getenv("BEAVER_WS_HOST"); host_env && *host_env) {
+        host = host_env;
+    }
+
+    std::ostringstream address;
+    address << "ws://" << host << ':' << port;
+    return address.str();
+}
+
 }  // namespace
 
 SystemStatusSnapshot collect_system_status() {
@@ -448,11 +480,26 @@ SystemStatusSnapshot collect_system_status() {
     snapshot.wifi = collect_wifi_status();
     snapshot.battery = collect_battery_status();
 
-    snapshot.websocket.address = "ws://localhost:5001";
-    snapshot.websocket.listening = std::find(snapshot.network.listening_ports.begin(),
-                                             snapshot.network.listening_ports.end(), 5001) !=
-                                   snapshot.network.listening_ports.end();
     snapshot.websocket.last_message.clear();
+    snapshot.websocket.address.clear();
+    snapshot.websocket.listening = false;
+    snapshot.websocket.uptime_seconds = -1.0;
+
+    const auto is_port_open = [&](std::uint16_t port) {
+        return std::binary_search(snapshot.network.listening_ports.begin(),
+                                  snapshot.network.listening_ports.end(), port);
+    };
+
+    if (const auto configured_port = parse_port_env("BEAVER_WS_PORT")) {
+        snapshot.websocket.address = build_websocket_address(*configured_port);
+        snapshot.websocket.listening = is_port_open(*configured_port);
+    } else {
+        constexpr std::uint16_t kLegacyWebsocketPort = 5001;
+        if (is_port_open(kLegacyWebsocketPort)) {
+            snapshot.websocket.address = build_websocket_address(kLegacyWebsocketPort);
+            snapshot.websocket.listening = true;
+        }
+    }
 
     snapshot.generated_at_iso = format_iso_timestamp(std::chrono::system_clock::now());
 
