@@ -203,7 +203,8 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     if (navigating_to_menu) {
         self->load_language(web_view, language);
     } else if (navigating_to_beaverphone) {
-        std::string html = self->manager_.beaverphone_page_html(language);
+        std::string html = self->manager_.beaverphone_page_html(
+            language, BeaverphoneMenuLinkMode::kRelativeIndex);
         std::string base_uri = build_base_uri();
         g_message("GtkApp loading BeaverPhone page. language=%s html_bytes=%zu base_uri=%s",
                   language_to_string(language), html.size(), base_uri.c_str());

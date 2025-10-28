@@ -93,17 +93,20 @@ std::string AppManager::to_html(Language language, const std::string& asset_pref
 }
 
 std::string AppManager::beaverphone_page_html() const {
-    return beaverphone_page_html(default_language_);
-}
-
-std::string AppManager::beaverphone_page_html(Language language) const {
-    return beaverphone_page_html(language, "");
+    return beaverphone_page_html(default_language_,
+                                 BeaverphoneMenuLinkMode::kAbsoluteRoot);
 }
 
 std::string AppManager::beaverphone_page_html(Language language,
-                                              const std::string& asset_prefix) const {
-    std::string html =
-        generate_beaverphone_dialpad_html(translation_catalog_, language, asset_prefix);
+                                              BeaverphoneMenuLinkMode menu_link_mode) const {
+    return beaverphone_page_html(language, "", menu_link_mode);
+}
+
+std::string AppManager::beaverphone_page_html(Language language,
+                                              const std::string& asset_prefix,
+                                              BeaverphoneMenuLinkMode menu_link_mode) const {
+    std::string html = generate_beaverphone_dialpad_html(translation_catalog_, language,
+                                                         asset_prefix, menu_link_mode);
     if (html.empty()) {
         g_warning("AppManager generated empty BeaverPhone HTML for language: %s",
                   language_to_string(language));
