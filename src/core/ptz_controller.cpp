@@ -76,7 +76,7 @@ CommandResult CommandResult::Error(std::string msg) {
 }
 
 PtzController::PtzController(const CctvConfig& config) : config_(config) {
-    if (!config_.is_ready()) {
+    if (!config_.ptz_is_ready()) {
         g_warning("PTZ controller initialized with incomplete configuration. host=%s user=%s",\
                   config_.camera_host.c_str(), sanitize_for_logging(config_.username).c_str());
     }
@@ -116,7 +116,7 @@ CommandResult PtzController::stop() {
 }
 
 CommandResult PtzController::send_continuous_move(double pan, double tilt, double zoom) {
-    if (!config_.is_ready()) {
+    if (!config_.ptz_is_ready()) {
         return CommandResult::Error("CCTV configuration incomplete");
     }
 
@@ -130,7 +130,7 @@ CommandResult PtzController::send_continuous_move(double pan, double tilt, doubl
 }
 
 CommandResult PtzController::send_stop(bool pan_tilt, bool zoom) {
-    if (!config_.is_ready()) {
+    if (!config_.ptz_is_ready()) {
         return CommandResult::Error("CCTV configuration incomplete");
     }
 
@@ -144,7 +144,7 @@ CommandResult PtzController::send_stop(bool pan_tilt, bool zoom) {
 
 CommandResult PtzController::send_soap_request(const std::string& body,
                                                const std::string& soap_action) {
-    if (!config_.is_ready()) {
+    if (!config_.ptz_is_ready()) {
         return CommandResult::Error("CCTV configuration incomplete");
     }
 
