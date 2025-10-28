@@ -314,7 +314,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
          << " data-status=\"disconnected\""
          << " data-label-connected=\"" << connection_connected << "\""
          << " data-label-connecting=\"" << connection_connecting << "\""
-         << " data-label-disconnected=\"" << connection_disconnected << "\"">\n";
+         << " data-label-disconnected=\"" << connection_disconnected << "\">\n";
     html << "              <span class=\"connection-indicator__dot\" aria-hidden=\"true\"></span>\n";
     html << "              <span class=\"connection-indicator__label\">" << connection_disconnected
          << "</span>\n";
