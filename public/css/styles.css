@@ -613,8 +613,9 @@ body {
 
 
 .beaversystem-root {
-  max-width: 1160px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: 1rem 1rem 2rem;
 }
 
