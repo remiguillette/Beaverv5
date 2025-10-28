@@ -1,6 +1,5 @@
 #include "core/cctv_config.h"
 
-#include <cstdlib>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -9,13 +8,14 @@
 
 namespace {
 
-std::string get_env_or_default(const char* name, const char* fallback = "") {
-    const char* value = std::getenv(name);
-    if (value == nullptr) {
-        return fallback == nullptr ? std::string{} : std::string{fallback};
-    }
-    return std::string{value};
-}
+constexpr const char kCameraHost[] = "192.168.1.47";
+constexpr const char kDirectRtspUri[] =
+    "rtsp://admin:MC44rg99qc%40@192.168.1.47:554/cam/realmonitor?channel=1&subtype=1";
+constexpr const char kOnvifPath[] = "onvif/ptz_service";
+constexpr const char kOnvifProfile[] = "Profile_1";
+constexpr const char kPtzUsername[] = "admin";
+constexpr const char kPtzPassword[] = "MC44rg99qc@";
+constexpr const char kHlsPlaylistUrl[] = "http://localhost:8080/streams/beaveralarm/index.m3u8";
 
 }  // namespace
 
@@ -107,32 +107,30 @@ std::string CctvConfig::onvif_endpoint() const {
 
 CctvConfig load_cctv_config_from_env() {
     CctvConfig config;
-    config.camera_host = get_env_or_default("BEAVER_ALARM_CCTV_HOST");
-    config.rtsp_path = get_env_or_default("BEAVER_ALARM_CCTV_RTSP_PATH", "cam/realmonitor?channel=1&subtype=1");
-    config.onvif_path = get_env_or_default("BEAVER_ALARM_ONVIF_PATH", "onvif/ptz_service");
-    config.username = get_env_or_default("BEAVER_ALARM_CCTV_USERNAME");
-    config.password = get_env_or_default("BEAVER_ALARM_CCTV_PASSWORD");
-    config.profile_token = get_env_or_default("BEAVER_ALARM_ONVIF_PROFILE", "Profile_1");
-    config.hls_playlist_url = get_env_or_default("BEAVER_ALARM_HLS_URL", "/streams/beaveralarm/index.m3u8");
-    config.streaming_protocol = "HLS";
+    config.camera_host = kCameraHost;
+    config.rtsp_path = kDirectRtspUri;
+    config.onvif_path = kOnvifPath;
+    config.username = kPtzUsername;
+    config.password = kPtzPassword;
+    config.profile_token = kOnvifProfile;
+    config.hls_playlist_url = kHlsPlaylistUrl;
+    config.streaming_protocol = "RTSP";
 
     static std::once_flag log_once;
     std::call_once(log_once, [&config]() {
         const std::string direct_rtsp = config.rtsp_uri(false);
-        if (!config.camera_host.empty()) {
-            g_message("Loaded BeaverAlarm CCTV host: %s", config.camera_host.c_str());
-        } else if (!direct_rtsp.empty()) {
+        g_message("Loaded BeaverAlarm CCTV host: %s", config.camera_host.c_str());
+        if (!direct_rtsp.empty()) {
             g_message("Using direct RTSP URI for BeaverAlarm CCTV feed: %s", direct_rtsp.c_str());
-        } else {
-            g_warning("BEAVER_ALARM_CCTV_HOST is not set and no direct RTSP URI provided; CCTV feed disabled.");
         }
 
         if (!config.profile_token.empty()) {
             g_message("Using ONVIF profile token: %s", config.profile_token.c_str());
         }
 
-        if (config.hls_playlist_url.empty()) {
-            g_warning("HLS playlist URL not configured; set BEAVER_ALARM_HLS_URL.");
+        if (!config.hls_playlist_url.empty()) {
+            g_message("HLS playlist URL available for BeaverAlarm CCTV: %s",
+                      config.hls_playlist_url.c_str());
         }
     });
 
