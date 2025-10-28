@@ -28,6 +28,14 @@ CXXFLAGS += $(shell pkg-config --cflags $(SDBUS_PKG))
 LDFLAGS += $(shell pkg-config --libs $(SDBUS_PKG))
 endif
 
+CURL_PKG := $(shell pkg-config --exists libcurl && echo libcurl)
+ifeq ($(CURL_PKG),)
+$(warning libcurl development package not found. PTZ HTTP calls will be disabled.)
+else
+CXXFLAGS += $(shell pkg-config --cflags $(CURL_PKG))
+LDFLAGS += $(shell pkg-config --libs $(CURL_PKG))
+endif
+
 TARGET := beaver_kiosk
 SRC_DIR := src
 OBJ_DIR := build

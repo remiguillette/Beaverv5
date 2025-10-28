@@ -1140,10 +1140,18 @@ body {
   background: rgba(12, 13, 20, 0.85);
   min-height: 220px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   position: relative;
   overflow: hidden;
+}
+
+.alarm-cctv__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  display: block;
 }
 
 .alarm-cctv__placeholder {
@@ -1166,6 +1174,72 @@ body {
   max-width: 20ch;
   margin: 0 auto;
   line-height: 1.5;
+}
+
+.alarm-cctv__hint--uri {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, "Courier New", monospace;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  word-break: break-all;
+}
+
+.alarm-ptz-controls {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.alarm-ptz-controls__title {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(248, 148, 34, 0.85);
+}
+
+.alarm-ptz-controls__buttons {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.alarm-ptz-button {
+  background: rgba(34, 38, 58, 0.9);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.alarm-ptz-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(255, 165, 0, 0.6);
+  box-shadow: 0 6px 18px rgba(255, 140, 0, 0.2);
+}
+
+.alarm-ptz-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.alarm-ptz-button.is-busy {
+  opacity: 0.7;
+}
+
+.alarm-ptz-button--stop {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+.alarm-ptz-button--stop:hover:not(:disabled) {
+  border-color: rgba(255, 107, 107, 0.6);
+  box-shadow: 0 6px 18px rgba(255, 80, 80, 0.25);
 }
 
 @media (max-width: 640px) {
