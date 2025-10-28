@@ -870,9 +870,9 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
         "Configure CCTV environment variables to enable the feed.", language);
     const CctvConfig cctv_config = load_cctv_config_from_env();
     const bool ptz_ready = cctv_config.ptz_is_ready();
-    const bool stream_ready = (!cctv_config.hls_playlist_url.empty() || has_rtsp_preview);
     const std::string rtsp_preview = cctv_config.rtsp_uri(false);
     const bool has_rtsp_preview = !rtsp_preview.empty();
+    const bool stream_ready = (!cctv_config.hls_playlist_url.empty() || has_rtsp_preview);
     const std::string back_to_menu = translations.translate("Back to menu", language);
     const std::string language_label = translations.translate("Language selection", language);
     const std::string switch_to_french = translations.translate("Switch to French", language);
