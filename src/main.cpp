@@ -83,8 +83,12 @@ int main(int argc, char* argv[]) {
     gtk_args.push_back(nullptr);
     int gtk_argc = static_cast<int>(gtk_args.size()) - 1;
 
-    manager.set_app_routes("BeaverDoc", {beaverdoc_local_url, beaverdoc_remote_url});
-    manager.set_app_routes("BeaverDebian", {beaverdebian_local_url, beaverdebian_remote_url});
+    manager.set_app_routes(
+        "BeaverDoc",
+        {RouteEntry{beaverdoc_local_url, false, ""}, RouteEntry{beaverdoc_remote_url, false, ""}});
+    manager.set_app_routes("BeaverDebian",
+                           {RouteEntry{beaverdebian_local_url, false, ""},
+                            RouteEntry{beaverdebian_remote_url, false, ""}});
 
     if (http_requested) {
         HttpServerApp server(manager, port);

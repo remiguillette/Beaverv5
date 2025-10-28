@@ -21,8 +21,17 @@ private:
                                        gpointer message,
 #endif
                                        gpointer user_data);
+    static void on_load_changed(WebKitWebView* web_view, WebKitLoadEvent load_event,
+                                gpointer user_data);
+    static void on_script_message_received(WebKitUserContentManager* content_manager,
+                                           WebKitJavascriptResult* result, gpointer user_data);
+
     void build_ui(GtkApplication* application);
     void load_language(WebKitWebView* web_view, Language language);
+    void ensure_remote_navigation_controls(WebKitWebView* web_view);
+    void remove_remote_navigation_controls(WebKitWebView* web_view);
+    void handle_remote_go_home();
 
     AppManager& manager_;
+    WebKitWebView* web_view_ = nullptr;
 };

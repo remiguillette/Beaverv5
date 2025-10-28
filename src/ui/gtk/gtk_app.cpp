@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -27,6 +28,134 @@ void GtkApp::on_activate(GtkApplication* application, gpointer user_data) {
 }
 
 namespace {
+constexpr const char kRemoteBackButtonScript[] = R"JS((() => {
+  const WRAPPER_ID = 'beaverRemoteMenuWrapper';
+  const BUTTON_ID = 'beaverRemoteMenuButton';
+  if (document.getElementById(WRAPPER_ID)) {
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.id = WRAPPER_ID;
+  Object.assign(wrapper.style, {
+    position: 'fixed',
+    top: '20px',
+    left: '20px',
+    zIndex: 9999,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '4px',
+    borderRadius: '16px',
+    background: 'transparent'
+  });
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = BUTTON_ID;
+  button.setAttribute('aria-label', 'Return to menu');
+  Object.assign(button.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    background: 'rgba(9, 12, 20, 0.85)',
+    color: '#f2f2f7',
+    fontWeight: '600',
+    fontSize: '15px',
+    padding: '10px 16px',
+    border: '1px solid rgba(255, 255, 255, 0.18)',
+    borderRadius: '14px',
+    cursor: 'pointer',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+    backdropFilter: 'blur(12px)',
+    transition: 'opacity 160ms ease, transform 160ms ease',
+    transform: 'translateY(-6px)'
+  });
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const icon = document.createElementNS(ns, 'svg');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('width', '20');
+  icon.setAttribute('height', '20');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '2');
+  icon.setAttribute('stroke-linecap', 'round');
+  icon.setAttribute('stroke-linejoin', 'round');
+
+  const line = document.createElementNS(ns, 'line');
+  line.setAttribute('x1', '19');
+  line.setAttribute('y1', '12');
+  line.setAttribute('x2', '5');
+  line.setAttribute('y2', '12');
+
+  const polyline = document.createElementNS(ns, 'polyline');
+  polyline.setAttribute('points', '12 19 5 12 12 5');
+
+  icon.appendChild(line);
+  icon.appendChild(polyline);
+
+  const text = document.createElement('span');
+  text.textContent = 'Menu';
+
+  button.appendChild(icon);
+  button.appendChild(text);
+
+  const setInteractive = () => {
+    button.style.opacity = '1';
+    button.style.pointerEvents = 'auto';
+    button.style.transform = 'translateY(0)';
+  };
+
+  const setPassive = () => {
+    button.style.opacity = '0';
+    button.style.pointerEvents = 'none';
+    button.style.transform = 'translateY(-6px)';
+  };
+
+  wrapper.addEventListener('mouseenter', setInteractive);
+  wrapper.addEventListener('mouseleave', () => {
+    if (!button.matches(':focus')) {
+      setPassive();
+    }
+  });
+  wrapper.addEventListener('touchstart', () => {
+    setInteractive();
+    window.setTimeout(() => {
+      if (!button.matches(':focus')) {
+        setPassive();
+      }
+    }, 2500);
+  }, { passive: true });
+  button.addEventListener('focus', setInteractive);
+  button.addEventListener('blur', setPassive);
+
+  button.addEventListener('click', () => {
+    try {
+      const handler = window.webkit && window.webkit.messageHandlers &&
+        window.webkit.messageHandlers.beaverkiosk;
+      if (handler && typeof handler.postMessage === 'function') {
+        handler.postMessage('go-home');
+      } else {
+        window.history.back();
+      }
+    } catch (error) {
+      window.history.back();
+    }
+  });
+
+  document.body.appendChild(wrapper);
+  setPassive();
+})();)JS";
+
+constexpr const char kRemoveRemoteBackButtonScript[] = R"JS((() => {
+  const wrapper = document.getElementById('beaverRemoteMenuWrapper');
+  if (wrapper && wrapper.parentNode) {
+    wrapper.parentNode.removeChild(wrapper);
+  }
+})();)JS";
+
 std::string build_base_uri() {
     namespace fs = std::filesystem;
     fs::path public_dir = fs::current_path() / "public";
@@ -294,7 +423,21 @@ void GtkApp::build_ui(GtkApplication* application) {
     };
 
     GtkWidget* webview = configure_webview();
+    web_view_ = WEBKIT_WEB_VIEW(webview);
+
+    WebKitUserContentManager* content_manager =
+        webkit_web_view_get_user_content_manager(WEBKIT_WEB_VIEW(webview));
+    if (content_manager != nullptr) {
+        if (!webkit_user_content_manager_register_script_message_handler(content_manager,
+                                                                         "beaverkiosk")) {
+            g_warning("GtkApp failed to register script message handler 'beaverkiosk'.");
+        }
+        g_signal_connect(content_manager, "script-message-received::beaverkiosk",
+                         G_CALLBACK(GtkApp::on_script_message_received), this);
+    }
+
     g_signal_connect(webview, "decide-policy", G_CALLBACK(GtkApp::on_decide_policy), this);
+    g_signal_connect(webview, "load-changed", G_CALLBACK(GtkApp::on_load_changed), this);
 #if defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
     g_signal_connect(webview, "console-message-sent", G_CALLBACK(GtkApp::on_console_message), this);
 #endif
@@ -494,5 +637,91 @@ void GtkApp::load_language(WebKitWebView* web_view, Language language) {
         g_warning("GtkApp received empty menu HTML for language: %s",
                   language_to_string(language));
     }
+    manager_.clear_navigation_history();
+    remove_remote_navigation_controls(web_view);
     webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+}
+
+void GtkApp::ensure_remote_navigation_controls(WebKitWebView* web_view) {
+    if (web_view == nullptr) {
+        return;
+    }
+
+    g_message("GtkApp injecting remote navigation controls.");
+    webkit_web_view_run_javascript(web_view, kRemoteBackButtonScript, nullptr, nullptr, nullptr);
+}
+
+void GtkApp::remove_remote_navigation_controls(WebKitWebView* web_view) {
+    if (web_view == nullptr) {
+        return;
+    }
+
+    g_message("GtkApp removing remote navigation controls.");
+    webkit_web_view_run_javascript(web_view, kRemoveRemoteBackButtonScript, nullptr, nullptr,
+                                   nullptr);
+}
+
+void GtkApp::handle_remote_go_home() {
+    if (web_view_ == nullptr) {
+        g_warning("GtkApp received remote go-home request without an active web view.");
+        return;
+    }
+
+    g_message("GtkApp received remote go-home request. Returning to kiosk menu.");
+    load_language(web_view_, manager_.get_default_language());
+}
+
+void GtkApp::on_load_changed(WebKitWebView* web_view, WebKitLoadEvent load_event,
+                             gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr || web_view == nullptr) {
+        return;
+    }
+
+    if (load_event != WEBKIT_LOAD_FINISHED) {
+        return;
+    }
+
+    const gchar* uri = webkit_web_view_get_uri(web_view);
+    std::string uri_string = uri != nullptr ? uri : "";
+    if (uri_string.empty()) {
+        self->remove_remote_navigation_controls(web_view);
+        return;
+    }
+
+    std::optional<RouteMatch> matched_route =
+        self->manager_.match_route_for_uri(uri_string, MenuRouteMode::kKiosk);
+    if (!matched_route.has_value()) {
+        self->remove_remote_navigation_controls(web_view);
+        return;
+    }
+
+    const std::string app_name = matched_route->app != nullptr ? matched_route->app->name : uri_string;
+    self->manager_.record_navigation(app_name, MenuRouteMode::kKiosk);
+
+    if (matched_route->route != nullptr && matched_route->route->remote) {
+        self->ensure_remote_navigation_controls(web_view);
+    } else {
+        self->remove_remote_navigation_controls(web_view);
+    }
+}
+
+void GtkApp::on_script_message_received(WebKitUserContentManager* /*content_manager*/,
+                                        WebKitJavascriptResult* result, gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr || result == nullptr) {
+        return;
+    }
+
+    gchar* value = webkit_javascript_result_to_string(result);
+    if (value == nullptr) {
+        return;
+    }
+
+    std::string message(value);
+    g_free(value);
+
+    if (message == "go-home") {
+        self->handle_remote_go_home();
+    }
 }

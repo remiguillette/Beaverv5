@@ -166,13 +166,13 @@ std::string contact_initial(const ExtensionContact& contact, Language language) 
 
 namespace {
 
-std::string resolve_route(const AppTile& app, MenuRouteMode route_mode) {
+const RouteEntry* resolve_route(const AppTile& app, MenuRouteMode route_mode) {
     switch (route_mode) {
         case MenuRouteMode::kKiosk:
-            return app.routes.kiosk;
+            return &app.routes.kiosk;
         case MenuRouteMode::kHttpServer:
         default:
-            return app.routes.http;
+            return &app.routes.http;
     }
 }
 
@@ -183,11 +183,16 @@ std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog&
                                    const std::string& asset_prefix) {
     std::ostringstream html;
 
-    const std::string route = resolve_route(app, route_mode);
+    const RouteEntry* route_entry = resolve_route(app, route_mode);
+    const std::string route = route_entry != nullptr ? route_entry->uri : "";
     const bool has_route = !route.empty();
     if (has_route) {
         html << "<a href=\"" << route << "\" class=\"app-tile app-tile--" << app.accent
-             << "\">\n";
+             << "\"";
+        if (route_entry != nullptr && route_entry->remote) {
+            html << " data-remote=\"true\"";
+        }
+        html << ">\n";
     } else {
         html << "<button type=\"button\" class=\"app-tile app-tile--" << app.accent << "\">\n";
     }
