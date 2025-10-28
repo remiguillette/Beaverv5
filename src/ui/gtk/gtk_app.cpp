@@ -148,6 +148,11 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         return FALSE;
     }
 
+    if (self->suppress_decide_policy_request_) {
+        self->suppress_decide_policy_request_ = false;
+        return FALSE;
+    }
+
     auto* navigation_decision = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
     WebKitNavigationAction* action =
         webkit_navigation_policy_decision_get_navigation_action(navigation_decision);
@@ -206,6 +211,7 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
             g_warning("GtkApp received empty BeaverPhone HTML for language: %s",
                       language_to_string(language));
         }
+        self->suppress_next_decide_policy();
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
     }
 
@@ -222,5 +228,10 @@ void GtkApp::load_language(WebKitWebView* web_view, Language language) {
         g_warning("GtkApp received empty menu HTML for language: %s",
                   language_to_string(language));
     }
+    suppress_next_decide_policy();
     webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+}
+
+void GtkApp::suppress_next_decide_policy() {
+    suppress_decide_policy_request_ = true;
 }
