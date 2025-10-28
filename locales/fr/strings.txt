@@ -16,3 +16,5 @@ Dialpad=Clavier téléphonique
 Enter a number=Composez un numéro
 Call=Appeler
 BeaverPhone description=Une maquette ludique du composeur BeaverPhone. Touchez les chiffres pour composer un numéro et imaginez être connecté instantanément.
+Phone extensions=Extensions
+Extension prefix=Poste
