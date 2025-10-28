@@ -16,7 +16,6 @@ private:
                                      WebKitPolicyDecisionType decision_type, gpointer user_data);
     void build_ui(GtkApplication* application);
     void load_language(WebKitWebView* web_view, Language language);
-    void install_dom_click_logger(WebKitWebView* web_view);
 
     AppManager& manager_;
 };
