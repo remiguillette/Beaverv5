@@ -14,21 +14,70 @@ std::string locale_directory() {
     return (fs::current_path() / "locales").string();
 }
 
+std::string extract_origin(const std::string& uri) {
+    if (uri.empty()) {
+        return "";
+    }
+
+    GUri* parsed_uri = g_uri_parse(uri.c_str(), G_URI_FLAGS_NONE, nullptr);
+    if (parsed_uri == nullptr) {
+        return "";
+    }
+
+    const gchar* scheme = g_uri_get_scheme(parsed_uri);
+    const gchar* host = g_uri_get_host(parsed_uri);
+    const gint port = g_uri_get_port(parsed_uri);
+
+    std::string origin;
+    if (scheme != nullptr && scheme[0] != '\0' && host != nullptr && host[0] != '\0') {
+        origin.assign(scheme);
+        origin.append("://");
+        origin.append(host);
+        if (port > 0) {
+            origin.push_back(':');
+            origin.append(std::to_string(port));
+        }
+    }
+
+    g_uri_unref(parsed_uri);
+    return origin;
+}
+
+RouteEntry make_route_entry(const std::string& uri, bool remote) {
+    RouteEntry entry;
+    entry.uri = uri;
+    entry.remote = remote;
+    entry.origin = extract_origin(uri);
+    return entry;
+}
+
+void normalize_route_entry(RouteEntry& entry) {
+    entry.origin = extract_origin(entry.uri);
+}
+
 }  // namespace
 
 AppManager::AppManager()
     : apps_({
           {"BeaverPhone", "violet", "icons/phone.svg",
-           {"apps/beaverphone", "/apps/beaverphone"}},
-          {"BeaverSystem", "cyan", "icons/server.svg", {"apps/beaversystem", "/apps/beaversystem"}},
-          {"BeaverAlarm", "amber", "icons/shield-alert.svg", {"", ""}},
-          {"BeaverTask", "red", "icons/square-check-big.svg", {"", ""}},
+           {make_route_entry("apps/beaverphone", false),
+            make_route_entry("/apps/beaverphone", false)}},
+          {"BeaverSystem", "cyan", "icons/server.svg",
+           {make_route_entry("apps/beaversystem", false),
+            make_route_entry("/apps/beaversystem", false)}},
+          {"BeaverAlarm", "amber", "icons/shield-alert.svg",
+           {make_route_entry("", false), make_route_entry("", false)}},
+          {"BeaverTask", "red", "icons/square-check-big.svg",
+           {make_route_entry("", false), make_route_entry("", false)}},
           {"BeaverDoc", "green", "icons/file-text.svg",
-           {"http://localhost:8000", "http://192.168.1.76:8000"}},
+           {make_route_entry("http://localhost:8000", false),
+            make_route_entry("http://192.168.1.76:8000", false)}},
           {"BeaverDebian", "violet", "icons/server-cog.svg",
-           {"http://localhost:9090/", "http://192.168.1.76:9090/"}},
+           {make_route_entry("http://localhost:9090/", false),
+            make_route_entry("http://192.168.1.76:9090/", false)}},
           {"BeaverNet", "amber", "icons/chromium.svg",
-           {"https://rgbeavernet.ca/", "https://rgbeavernet.ca/"}}}),
+           {make_route_entry("https://rgbeavernet.ca/", true),
+            make_route_entry("https://rgbeavernet.ca/", true)}}}),
       default_language_(Language::French),
       translation_catalog_(locale_directory()) {
     g_message("AppManager initialized with %zu apps. default_language=%s", apps_.size(),
@@ -50,9 +99,65 @@ void AppManager::set_app_routes(const std::string& app_name, const AppRoutes& ro
         return;
     }
 
-    it->routes = routes;
+    AppRoutes normalized = routes;
+    normalize_route_entry(normalized.kiosk);
+    normalize_route_entry(normalized.http);
+    it->routes = normalized;
     g_message("AppManager updated routes for '%s'. kiosk=%s http=%s", app_name.c_str(),
-              routes.kiosk.c_str(), routes.http.c_str());
+              normalized.kiosk.uri.c_str(), normalized.http.uri.c_str());
+}
+
+void AppManager::record_navigation(const std::string& app_name, MenuRouteMode route_mode) {
+    if (!navigation_history_.empty()) {
+        const NavigationRecord& previous = navigation_history_.back();
+        if (previous.app_name == app_name && previous.route_mode == route_mode) {
+            g_message("AppManager navigation unchanged (app=%s mode=%s).", app_name.c_str(),
+                      route_mode == MenuRouteMode::kKiosk ? "kiosk" : "http");
+            return;
+        }
+    }
+
+    navigation_history_.push_back({app_name, route_mode});
+    g_message("AppManager recorded navigation. app=%s mode=%s", app_name.c_str(),
+              route_mode == MenuRouteMode::kKiosk ? "kiosk" : "http");
+}
+
+void AppManager::clear_navigation_history() {
+    if (!navigation_history_.empty()) {
+        g_message("AppManager clearing %zu navigation records.", navigation_history_.size());
+    }
+    navigation_history_.clear();
+}
+
+std::optional<RouteMatch> AppManager::match_route_for_uri(const std::string& uri,
+                                                          MenuRouteMode route_mode) const {
+    const std::string origin = extract_origin(uri);
+    if (origin.empty()) {
+        return std::nullopt;
+    }
+
+    for (const auto& app : apps_) {
+        const RouteEntry* entry = nullptr;
+        switch (route_mode) {
+            case MenuRouteMode::kKiosk:
+                entry = &app.routes.kiosk;
+                break;
+            case MenuRouteMode::kHttpServer:
+            default:
+                entry = &app.routes.http;
+                break;
+        }
+
+        if (entry == nullptr || !entry->remote) {
+            continue;
+        }
+
+        if (!entry->origin.empty() && entry->origin == origin) {
+            return RouteMatch{&app, entry};
+        }
+    }
+
+    return std::nullopt;
 }
 
 void AppManager::set_default_language(Language language) {

@@ -1,14 +1,21 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "core/language.h"
 #include "core/translation_catalog.h"
 
+struct RouteEntry {
+    std::string uri;
+    bool remote;
+    std::string origin;
+};
+
 struct AppRoutes {
-    std::string kiosk;
-    std::string http;
+    RouteEntry kiosk;
+    RouteEntry http;
 };
 
 struct AppTile {
@@ -16,6 +23,11 @@ struct AppTile {
     std::string accent;
     std::string icon;
     AppRoutes routes;
+};
+
+struct RouteMatch {
+    const AppTile* app;
+    const RouteEntry* route;
 };
 
 enum class MenuRouteMode {
@@ -33,6 +45,11 @@ enum class BeaverSystemMenuLinkMode {
     kRelativeIndex
 };
 
+struct NavigationRecord {
+    std::string app_name;
+    MenuRouteMode route_mode;
+};
+
 class AppManager {
 public:
     AppManager();
@@ -43,6 +60,11 @@ public:
     Language get_default_language() const;
 
     void set_app_routes(const std::string& app_name, const AppRoutes& routes);
+
+    void record_navigation(const std::string& app_name, MenuRouteMode route_mode);
+    void clear_navigation_history();
+    std::optional<RouteMatch> match_route_for_uri(const std::string& uri,
+                                                  MenuRouteMode route_mode) const;
 
     std::string to_json() const;
     std::string to_json(Language language) const;
@@ -73,4 +95,5 @@ private:
     std::vector<AppTile> apps_;
     Language default_language_;
     TranslationCatalog translation_catalog_;
+    std::vector<NavigationRecord> navigation_history_;
 };
