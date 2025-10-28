@@ -79,6 +79,7 @@ struct ExtensionContact {
     const char* details_fr;
     const char* details_en;
     const char* extension;
+    const char* icon_path;
 };
 
 constexpr std::array<ExtensionContact, 4> kExtensionContacts = {{
@@ -89,7 +90,8 @@ constexpr std::array<ExtensionContact, 4> kExtensionContacts = {{
      "Internal line",
      "Bureau 101",
      "Office 101",
-     "1201"},
+     "1201",
+     "contact/Police.svg"},
     {"spca",
      "SPCA Niagara",
      "SPCA Niagara",
@@ -97,7 +99,8 @@ constexpr std::array<ExtensionContact, 4> kExtensionContacts = {{
      "Paws Law program",
      "Bureau 3434",
      "Office 3434",
-     "3434"},
+     "3434",
+     "contact/SPCA.svg"},
     {"mom",
      "Maman",
      "Mom",
@@ -105,7 +108,8 @@ constexpr std::array<ExtensionContact, 4> kExtensionContacts = {{
      "Direct line",
      "Bureau des plaintes",
      "Complaints Office",
-     "0022"},
+     "0022",
+     "contact/mom.svg"},
     {"serviceOntario",
      "Services Ontario",
      "Services Ontario",
@@ -113,7 +117,8 @@ constexpr std::array<ExtensionContact, 4> kExtensionContacts = {{
      "Government of Ontario",
      "Poste *1345",
      "Desktop *1345",
-     "1345"}
+     "1345",
+     "contact/ontario.svg"}
 }};
 
 std::string contact_initial(const ExtensionContact& contact, Language language) {
@@ -369,8 +374,17 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
              << "\" data-extension-value=\"" << contact.extension
              << "\">\n";
         const std::string initial = contact_initial(contact, language);
-        html << "              <span class=\"extension-card__avatar\" aria-hidden=\"true\">" << initial
-             << "</span>\n";
+        const std::string icon_path = contact.icon_path ? contact.icon_path : "";
+        if (!icon_path.empty()) {
+            html << "              <span class=\"extension-card__avatar extension-card__avatar--has-image\""
+                 << " aria-hidden=\"true\">\n";
+            html << "                <img src=\"" << resolve_asset_path(asset_prefix, icon_path)
+                 << "\" alt=\"\" class=\"extension-card__avatar-image\" loading=\"lazy\" />\n";
+            html << "              </span>\n";
+        } else {
+            html << "              <span class=\"extension-card__avatar\" aria-hidden=\"true\">" << initial
+                 << "</span>\n";
+        }
         html << "              <div class=\"extension-card__content\">\n";
         html << "                <h3 class=\"extension-card__name\">" << name << "</h3>\n";
         html << "                <p class=\"extension-card__subtitle\">" << subtitle << "</p>\n";
