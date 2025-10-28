@@ -1151,7 +1151,13 @@ std::string generate_beaversystem_dashboard_html(const TranslationCatalog& trans
     append("          }");
     append("        }");
     append("        const lastMessage = (websocket.lastMessage || '').toString().trim();");
-    append("        setText(wsLastMessageEl, lastMessage ? lastMessage : strings.noTelemetry);");
+    append("        let fallbackMessage = strings.noTelemetry;");
+    append("        if (websocket.listening) {");
+    append("          fallbackMessage = strings.connected;");
+    append("        } else if (websocket.address) {");
+    append("          fallbackMessage = strings.notConnected;");
+    append("        }");
+    append("        setText(wsLastMessageEl, lastMessage ? lastMessage : fallbackMessage);");
     append("        renderBattery(data.battery);");
     append("        if (debianUptimeEl && data.debian) {");
     append("          setText(debianUptimeEl, data.debian.uptimeHuman || strings.unknown);");

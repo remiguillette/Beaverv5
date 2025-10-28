@@ -495,10 +495,8 @@ SystemStatusSnapshot collect_system_status() {
         snapshot.websocket.listening = is_port_open(*configured_port);
     } else {
         constexpr std::uint16_t kLegacyWebsocketPort = 5001;
-        if (is_port_open(kLegacyWebsocketPort)) {
-            snapshot.websocket.address = build_websocket_address(kLegacyWebsocketPort);
-            snapshot.websocket.listening = true;
-        }
+        snapshot.websocket.address = build_websocket_address(kLegacyWebsocketPort);
+        snapshot.websocket.listening = is_port_open(kLegacyWebsocketPort);
     }
 
     snapshot.generated_at_iso = format_iso_timestamp(std::chrono::system_clock::now());
