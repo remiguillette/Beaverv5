@@ -103,6 +103,12 @@ std::string AppManager::beaverphone_page_html(Language language,
 }
 
 std::string AppManager::beaverphone_page_html(Language language,
+                                              const std::string& asset_prefix) const {
+    return beaverphone_page_html(language, asset_prefix,
+                                 BeaverphoneMenuLinkMode::kAbsoluteRoot);
+}
+
+std::string AppManager::beaverphone_page_html(Language language,
                                               const std::string& asset_prefix,
                                               BeaverphoneMenuLinkMode menu_link_mode) const {
     std::string html = generate_beaverphone_dialpad_html(translation_catalog_, language,
