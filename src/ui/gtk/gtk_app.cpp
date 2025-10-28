@@ -202,11 +202,6 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         uri, navigation_type_to_string(navigation_type), is_user_gesture ? "true" : "false",
         mouse_button, modifiers);
 
-    if (!is_user_gesture) {
-        g_message("GtkApp allowing navigation because it was not triggered by a user gesture.");
-        return FALSE;
-    }
-
     GUri* parsed_uri = g_uri_parse(uri, G_URI_FLAGS_NONE, nullptr);
     if (parsed_uri == nullptr) {
         return FALSE;
