@@ -36,6 +36,38 @@ std::string build_base_uri() {
     return uri;
 }
 
+std::string normalize_navigation_path(const std::string& path) {
+    if (path.empty()) {
+        return path;
+    }
+
+    namespace fs = std::filesystem;
+    fs::path public_dir = fs::current_path() / "public";
+    std::string public_prefix = public_dir.generic_string();
+    if (!public_prefix.empty() && public_prefix.front() != '/') {
+        public_prefix.insert(public_prefix.begin(), '/');
+    }
+
+    if (!public_prefix.empty() && path.rfind(public_prefix, 0) == 0) {
+        std::string remainder = path.substr(public_prefix.size());
+        if (remainder.empty() || remainder == "/") {
+            return "/";
+        }
+        if (remainder.front() != '/') {
+            remainder.insert(remainder.begin(), '/');
+        }
+        return remainder;
+    }
+
+    if (path.front() != '/') {
+        std::string normalized = path;
+        normalized.insert(normalized.begin(), '/');
+        return normalized;
+    }
+
+    return path;
+}
+
 Language language_from_query(const std::string& query, Language fallback) {
     Language language = fallback;
     std::stringstream query_stream(query);
@@ -126,14 +158,17 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 
     g_uri_unref(parsed_uri);
 
-    if (path_string.empty()) {
+    std::string normalized_path = normalize_navigation_path(path_string);
+
+    if (normalized_path.empty()) {
         return FALSE;
     }
 
     Language language = language_from_query(query_string, self->manager_.get_default_language());
 
-    const bool navigating_to_menu = (path_string == "/" || path_string == "/index.html");
-    const bool navigating_to_beaverphone = (path_string == "/apps/beaverphone");
+    const bool navigating_to_menu =
+        (normalized_path == "/" || normalized_path == "/index.html");
+    const bool navigating_to_beaverphone = (normalized_path == "/apps/beaverphone");
 
     if (!navigating_to_menu && !navigating_to_beaverphone) {
         return FALSE;
