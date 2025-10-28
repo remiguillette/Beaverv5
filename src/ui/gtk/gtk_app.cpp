@@ -246,9 +246,6 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 
     std::string normalized_path = normalize_navigation_path(path_string);
 
-    g_message("GtkApp navigation request: path=%s query=%s", normalized_path.c_str(),
-              query_string.c_str());
-
     if (normalized_path.empty()) {
         return FALSE;
     }
@@ -258,10 +255,6 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     const bool navigating_to_menu =
         (normalized_path == "/" || normalized_path == "/index.html");
     const bool navigating_to_beaverphone = (normalized_path == "/apps/beaverphone");
-
-    g_message("GtkApp resolved navigation target. menu=%s beaverphone=%s language=%s",
-              navigating_to_menu ? "true" : "false",
-              navigating_to_beaverphone ? "true" : "false", language_to_string(language));
 
     if (!navigating_to_menu && !navigating_to_beaverphone) {
         return FALSE;
@@ -275,14 +268,11 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         std::string html = self->manager_.beaverphone_page_html(
             language, BeaverphoneMenuLinkMode::kRelativeIndex);
         std::string base_uri = build_base_uri();
-        g_message("GtkApp loading BeaverPhone page. language=%s html_bytes=%zu base_uri=%s",
-                  language_to_string(language), html.size(), base_uri.c_str());
         if (html.empty()) {
             g_warning("GtkApp received empty BeaverPhone HTML for language: %s",
                       language_to_string(language));
         }
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
-        self->install_dom_click_logger(web_view);
     }
 
     webkit_policy_decision_ignore(decision);
@@ -292,25 +282,9 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
     std::string html = manager_.to_html(language, MenuRouteMode::kKiosk);
     std::string base_uri = build_base_uri();
-    g_message("GtkApp loading menu page. language=%s html_bytes=%zu base_uri=%s",
-              language_to_string(language), html.size(), base_uri.c_str());
     if (html.empty()) {
         g_warning("GtkApp received empty menu HTML for language: %s",
                   language_to_string(language));
     }
     webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
-    install_dom_click_logger(web_view);
-}
-
-void GtkApp::install_dom_click_logger(WebKitWebView* web_view) {
-    if (web_view == nullptr) {
-        return;
-    }
-
-    static constexpr const char kClickLoggerScript[] = R"(document.addEventListener('click', event => {
-        console.log('JS CLICK:', (event.target && event.target.outerHTML) ? event.target.outerHTML.slice(0, 200) : '<unknown>');
-    });)";
-
-    g_message("GtkApp installing DOM click logger script in WebView.");
-    webkit_web_view_run_javascript(web_view, kClickLoggerScript, nullptr, nullptr, nullptr);
 }
