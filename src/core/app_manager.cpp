@@ -75,8 +75,9 @@ std::string AppManager::to_json(Language language) const {
     return json.str();
 }
 
-std::string AppManager::to_html(Language language) const {
-    std::string html = generate_menu_page_html(apps_, translation_catalog_, language);
+std::string AppManager::to_html(Language language, const std::string& asset_prefix) const {
+    std::string html =
+        generate_menu_page_html(apps_, translation_catalog_, language, asset_prefix);
     if (html.empty()) {
         g_warning("AppManager generated empty menu HTML for language: %s",
                   language_to_string(language));
@@ -91,8 +92,10 @@ std::string AppManager::beaverphone_page_html() const {
     return beaverphone_page_html(default_language_);
 }
 
-std::string AppManager::beaverphone_page_html(Language language) const {
-    std::string html = generate_beaverphone_dialpad_html(translation_catalog_, language);
+std::string AppManager::beaverphone_page_html(Language language,
+                                              const std::string& asset_prefix) const {
+    std::string html =
+        generate_beaverphone_dialpad_html(translation_catalog_, language, asset_prefix);
     if (html.empty()) {
         g_warning("AppManager generated empty BeaverPhone HTML for language: %s",
                   language_to_string(language));
