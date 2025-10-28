@@ -246,8 +246,8 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     const std::string switch_to_english = translations.translate("Switch to English", language);
 
     const std::string menu_href = build_menu_href(language, menu_link_mode);
-    const std::string beaverphone_french_href = "/apps/beaverphone?lang=fr";
-    const std::string beaverphone_english_href = "/apps/beaverphone?lang=en";
+    const std::string beaverphone_french_href = "apps/beaverphone?lang=fr";
+    const std::string beaverphone_english_href = "apps/beaverphone?lang=en";
 
     html << "<!DOCTYPE html>\n";
     html << "<html lang=\"" << lang_code << "\">\n";

@@ -16,7 +16,7 @@ std::string locale_directory() {
 
 AppManager::AppManager()
     : apps_({
-          {"BeaverPhone", "violet", "icons/phone.svg", "/apps/beaverphone"},
+          {"BeaverPhone", "violet", "icons/phone.svg", "apps/beaverphone"},
           {"BeaverSystem", "cyan", "icons/server.svg", ""},
           {"BeaverAlarm", "amber", "icons/shield-alert.svg", ""},
           {"BeaverTask", "red", "icons/square-check-big.svg", ""},
