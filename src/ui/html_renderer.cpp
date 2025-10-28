@@ -402,6 +402,25 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
         const clearButton = doc.querySelector('.dialpad-action--clear');
         const dialpad = doc.querySelector('.dialpad-grid');
         const extensions = doc.querySelector('.extension-list');
+        const connectionIndicator = doc.querySelector('.connection-indicator');
+        const connectionLabel = connectionIndicator
+          ? connectionIndicator.querySelector('.connection-indicator__label')
+          : null;
+        const connectionLabels = connectionIndicator
+          ? {
+              connected: connectionIndicator.getAttribute('data-label-connected') || 'Connected',
+              connecting: connectionIndicator.getAttribute('data-label-connecting') || 'Connecting…',
+              disconnected:
+                connectionIndicator.getAttribute('data-label-disconnected') || 'Disconnected',
+            }
+          : null;
+        const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsHost = window.location.hostname || '127.0.0.1';
+        const wsUrl = `${wsScheme}://${wsHost}:5001`;
+        const reconnectDelayMs = 5000;
+        let socket = null;
+        let reconnectTimer = 0;
+        let shouldReconnect = true;
         const raf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window)
                                                  : (cb) => window.setTimeout(cb, 16);
         const digits = [];
@@ -485,6 +504,133 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
           }
           scheduleRender();
         };
+
+        const clearReconnectTimer = () => {
+          if (reconnectTimer) {
+            window.clearTimeout(reconnectTimer);
+            reconnectTimer = 0;
+          }
+        };
+
+        const setConnectionStatus = (status) => {
+          if (!connectionIndicator || !connectionLabels || !connectionLabel) {
+            return;
+          }
+          if (connectionIndicator.getAttribute('data-status') !== status) {
+            connectionIndicator.setAttribute('data-status', status);
+          }
+          const nextLabel = connectionLabels[status] || '';
+          if (connectionLabel.textContent !== nextLabel) {
+            connectionLabel.textContent = nextLabel;
+          }
+        };
+
+        const scheduleReconnect = () => {
+          if (!shouldReconnect) {
+            return;
+          }
+          clearReconnectTimer();
+          reconnectTimer = window.setTimeout(() => {
+            setConnectionStatus('connecting');
+            connectSocket();
+          }, reconnectDelayMs);
+        };
+
+        const connectSocket = () => {
+          clearReconnectTimer();
+          if (
+            socket &&
+            socket.readyState !== WebSocket.CLOSED &&
+            socket.readyState !== WebSocket.CLOSING
+          ) {
+            try {
+              socket.close();
+            } catch (error) {
+              console.warn('[BeaverPhone] Unable to close previous WebSocket instance.', error);
+            }
+          }
+
+          let nextSocket;
+          try {
+            nextSocket = new WebSocket(wsUrl);
+          } catch (error) {
+            console.error('[BeaverPhone] Failed to create WebSocket connection.', error);
+            scheduleReconnect();
+            return;
+          }
+
+          socket = nextSocket;
+          setConnectionStatus('connecting');
+
+          socket.addEventListener('open', () => {
+            setConnectionStatus('connected');
+          });
+
+          socket.addEventListener('message', (event) => {
+            console.debug('[BeaverPhone] Message received from WS server:', event.data);
+          });
+
+          socket.addEventListener('close', () => {
+            setConnectionStatus('disconnected');
+            scheduleReconnect();
+          });
+
+          socket.addEventListener('error', (event) => {
+            console.error('[BeaverPhone] WebSocket error.', event);
+            if (socket === nextSocket) {
+              try {
+                socket.close();
+              } catch (closeError) {
+                console.warn('[BeaverPhone] Error while closing WebSocket after failure.', closeError);
+              }
+            }
+          });
+        };
+
+        const sendDialPayload = (dialDigits) => {
+          if (!dialDigits) {
+            return false;
+          }
+          if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.warn('[BeaverPhone] WebSocket is not connected. Payload not sent.');
+            return false;
+          }
+          try {
+            const payload = {
+              type: 'dial',
+              number: dialDigits,
+              source: 'BeaverPhone Dialpad',
+            };
+            socket.send(JSON.stringify(payload));
+            console.debug('[BeaverPhone] Dial payload sent.', payload);
+            return true;
+          } catch (error) {
+            console.error('[BeaverPhone] Failed to send dial payload.', error);
+            return false;
+          }
+        };
+
+        window.addEventListener('beforeunload', () => {
+          shouldReconnect = false;
+          clearReconnectTimer();
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            try {
+              socket.close();
+            } catch (error) {
+              console.warn('[BeaverPhone] Error while closing WebSocket on unload.', error);
+            }
+          }
+        });
+
+        window.addEventListener('beaverphone:call', (event) => {
+          if (!event || !event.detail) {
+            return;
+          }
+          const dialDigits = event.detail.digits || '';
+          sendDialPayload(dialDigits);
+        });
+
+        connectSocket();
 
         if (dialpad) {
           dialpad.addEventListener('click', (event) => {
