@@ -1,5 +1,6 @@
 #include "core/app_manager.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <sstream>
 
@@ -22,8 +23,10 @@ AppManager::AppManager()
           {"BeaverSystem", "cyan", "icons/server.svg", {"apps/beaversystem", "/apps/beaversystem"}},
           {"BeaverAlarm", "amber", "icons/shield-alert.svg", {"", ""}},
           {"BeaverTask", "red", "icons/square-check-big.svg", {"", ""}},
-          {"BeaverDoc", "green", "icons/file-text.svg", {"", ""}},
-          {"BeaverDebian", "violet", "icons/server-cog.svg", {"", ""}},
+          {"BeaverDoc", "green", "icons/file-text.svg",
+           {"http://localhost:8000", "http://192.168.1.76:8000"}},
+          {"BeaverDebian", "violet", "icons/server-cog.svg",
+           {"http://localhost:9090/", "http://192.168.1.76:9090/"}},
           {"BeaverNet", "amber", "icons/chromium.svg", {"", ""}}}),
       default_language_(Language::French),
       translation_catalog_(locale_directory()) {
@@ -33,6 +36,22 @@ AppManager::AppManager()
 
 const std::vector<AppTile>& AppManager::get_available_apps() const {
     return apps_;
+}
+
+void AppManager::set_app_routes(const std::string& app_name, const AppRoutes& routes) {
+    auto it = std::find_if(apps_.begin(), apps_.end(), [&](const AppTile& tile) {
+        return tile.name == app_name;
+    });
+
+    if (it == apps_.end()) {
+        g_warning("AppManager could not find app named '%s' when attempting to update routes.",
+                  app_name.c_str());
+        return;
+    }
+
+    it->routes = routes;
+    g_message("AppManager updated routes for '%s'. kiosk=%s http=%s", app_name.c_str(),
+              routes.kiosk.c_str(), routes.http.c_str());
 }
 
 void AppManager::set_default_language(Language language) {
