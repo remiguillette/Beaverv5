@@ -43,26 +43,21 @@ std::string normalize_navigation_path(const std::string& path) {
 
     namespace fs = std::filesystem;
     fs::path public_dir = fs::current_path() / "public";
-    std::string public_prefix = public_dir.generic_string();
-    if (!public_prefix.empty() && public_prefix.front() != '/') {
-        public_prefix.insert(public_prefix.begin(), '/');
-    }
+    std::string public_dir_string = public_dir.string();
 
-    if (!public_prefix.empty() && path.rfind(public_prefix, 0) == 0) {
-        std::string remainder = path.substr(public_prefix.size());
-        if (remainder.empty() || remainder == "/") {
-            return "/";
+    if (!public_dir_string.empty() && path.rfind(public_dir_string, 0) == 0) {
+        std::string remainder = path.substr(public_dir_string.size());
+        if (remainder.empty()) {
+            remainder = "/";
         }
-        if (remainder.front() != '/') {
+        if (!remainder.empty() && remainder.front() != '/') {
             remainder.insert(remainder.begin(), '/');
         }
         return remainder;
     }
 
     if (path.front() != '/') {
-        std::string normalized = path;
-        normalized.insert(normalized.begin(), '/');
-        return normalized;
+        return std::string("/") + path;
     }
 
     return path;
@@ -159,6 +154,8 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     g_uri_unref(parsed_uri);
 
     std::string normalized_path = normalize_navigation_path(path_string);
+
+    g_message("GtkApp navigating to: %s", normalized_path.c_str());
 
     if (normalized_path.empty()) {
         return FALSE;
