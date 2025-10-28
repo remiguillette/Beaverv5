@@ -50,6 +50,10 @@ std::string AppManager::to_html() const {
     return to_html(default_language_);
 }
 
+std::string AppManager::to_html(Language language) const {
+    return to_html(language, "");
+}
+
 std::string AppManager::to_json(Language language) const {
     std::ostringstream json;
     json << "{\n";
@@ -90,6 +94,10 @@ std::string AppManager::to_html(Language language, const std::string& asset_pref
 
 std::string AppManager::beaverphone_page_html() const {
     return beaverphone_page_html(default_language_);
+}
+
+std::string AppManager::beaverphone_page_html(Language language) const {
+    return beaverphone_page_html(language, "");
 }
 
 std::string AppManager::beaverphone_page_html(Language language,
