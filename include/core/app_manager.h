@@ -36,6 +36,8 @@ public:
     std::string beaverphone_page_html(Language language,
                                       BeaverphoneMenuLinkMode menu_link_mode =
                                           BeaverphoneMenuLinkMode::kAbsoluteRoot) const;
+    std::string beaverphone_page_html(Language language,
+                                      const std::string& asset_prefix) const;
     std::string beaverphone_page_html(Language language, const std::string& asset_prefix,
                                       BeaverphoneMenuLinkMode menu_link_mode =
                                           BeaverphoneMenuLinkMode::kAbsoluteRoot) const;
