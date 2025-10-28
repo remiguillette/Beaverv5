@@ -28,6 +28,29 @@ std::string language_toggle_button(const std::string& label, const std::string& 
     return html.str();
 }
 
+std::string resolve_asset_path(const std::string& asset_prefix, const std::string& relative_path) {
+    if (relative_path.empty()) {
+        return relative_path;
+    }
+
+    if (asset_prefix.empty()) {
+        return relative_path;
+    }
+
+    if (asset_prefix.back() == '/') {
+        if (!relative_path.empty() && relative_path.front() == '/') {
+            return asset_prefix + relative_path.substr(1);
+        }
+        return asset_prefix + relative_path;
+    }
+
+    if (!relative_path.empty() && relative_path.front() == '/') {
+        return asset_prefix + relative_path;
+    }
+
+    return asset_prefix + "/" + relative_path;
+}
+
 struct DialpadKey {
     const char* symbol;
     const char* letters;
@@ -48,7 +71,7 @@ constexpr std::array<DialpadKey, 12> kDialpadKeys = {{{"1", ""},
 }  // namespace
 
 std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog& translations,
-                                   Language language) {
+                                   Language language, const std::string& asset_prefix) {
     std::ostringstream html;
 
     const bool has_route = !app.route.empty();
@@ -59,7 +82,7 @@ std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog&
         html << "<button type=\"button\" class=\"app-tile app-tile--" << app.accent << "\">\n";
     }
     html << "  <div class=\"app-tile__icon\" aria-hidden=\"true\">\n";
-    html << "    <img src=\"" << app.icon
+    html << "    <img src=\"" << resolve_asset_path(asset_prefix, app.icon)
          << "\" alt=\"\" class=\"app-tile__icon-image\" loading=\"lazy\" />\n";
     html << "  </div>\n";
     html << "  <h3 class=\"app-tile__name\">"
@@ -74,7 +97,8 @@ std::string generate_app_tile_html(const AppTile& app, const TranslationCatalog&
 }
 
 std::string generate_menu_page_html(const std::vector<AppTile>& apps,
-                                    const TranslationCatalog& translations, Language language) {
+                                    const TranslationCatalog& translations, Language language,
+                                    const std::string& asset_prefix) {
     std::ostringstream html;
 
     const char* lang_code = html_lang_code(language);
@@ -91,7 +115,8 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
     html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
     html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
-    html << "  <link rel=\"stylesheet\" href=\"css/styles.css\" />\n";
+    html << "  <link rel=\"stylesheet\" href=\""
+         << resolve_asset_path(asset_prefix, "css/styles.css") << "\" />\n";
     html << "</head>\n";
     html << "<body>\n";
     html << "  <div id=\"root\">\n";
@@ -116,7 +141,7 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     html << "      <main class=\"menu-grid\">\n";
 
     for (const auto& app : apps) {
-        html << "        " << generate_app_tile_html(app, translations, language);
+        html << "        " << generate_app_tile_html(app, translations, language, asset_prefix);
     }
     
     html << "      </main>\n";
@@ -129,7 +154,8 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
 }
 
 std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translations,
-                                              Language language) {
+                                              Language language,
+                                              const std::string& asset_prefix) {
     std::ostringstream html;
 
     const char* lang_code = html_lang_code(language);
@@ -156,7 +182,8 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n";
     html << "  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n";
     html << "  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\" />\n";
-    html << "  <link rel=\"stylesheet\" href=\"css/styles.css\" />\n";
+    html << "  <link rel=\"stylesheet\" href=\""
+         << resolve_asset_path(asset_prefix, "css/styles.css") << "\" />\n";
     html << "</head>\n";
     html << "<body>\n";
     html << "  <div id=\"root\">\n";

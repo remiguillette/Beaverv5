@@ -168,13 +168,15 @@ void HttpServerApp::handle_request(int client_socket) {
         }
     }
 
+    constexpr const char* kHttpAssetPrefix = "/";
+
     if (path == "/" || path == "/index.html") {
-        response.body = manager_.to_html(language);
+        response.body = manager_.to_html(language, kHttpAssetPrefix);
         response.headers["Content-Type"] = "text/html; charset=utf-8";
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
         response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
     } else if (path == "/apps/beaverphone") {
-        response.body = manager_.beaverphone_page_html(language);
+        response.body = manager_.beaverphone_page_html(language, kHttpAssetPrefix);
         response.headers["Content-Type"] = "text/html; charset=utf-8";
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
         response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
