@@ -417,6 +417,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
         const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const wsHost = window.location.hostname || '127.0.0.1';
         const wsUrl = `${wsScheme}://${wsHost}:5001`;
+        console.info('[BeaverPhone] WebSocket endpoint:', wsUrl);
         const reconnectDelayMs = 5000;
         let socket = null;
         let reconnectTimer = 0;
@@ -527,10 +528,19 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
 
         const scheduleReconnect = () => {
           if (!shouldReconnect) {
+            console.info(
+              '[BeaverPhone] WebSocket reconnect suppressed because shouldReconnect=false.'
+            );
             return;
           }
           clearReconnectTimer();
+          console.info(
+            '[BeaverPhone] Scheduling WebSocket reconnect in',
+            reconnectDelayMs,
+            'ms.'
+          );
           reconnectTimer = window.setTimeout(() => {
+            console.info('[BeaverPhone] Attempting WebSocket reconnect now.');
             setConnectionStatus('connecting');
             connectSocket();
           }, reconnectDelayMs);
@@ -544,6 +554,10 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
             socket.readyState !== WebSocket.CLOSING
           ) {
             try {
+              console.info(
+                '[BeaverPhone] Closing existing WebSocket before establishing a new one.',
+                { readyState: socket.readyState }
+              );
               socket.close();
             } catch (error) {
               console.warn('[BeaverPhone] Unable to close previous WebSocket instance.', error);
@@ -552,6 +566,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
 
           let nextSocket;
           try {
+            console.info('[BeaverPhone] Attempting to open WebSocket connection...');
             nextSocket = new WebSocket(wsUrl);
           } catch (error) {
             console.error('[BeaverPhone] Failed to create WebSocket connection.', error);
@@ -563,6 +578,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
           setConnectionStatus('connecting');
 
           socket.addEventListener('open', () => {
+            console.info('[BeaverPhone] WebSocket connection established successfully.');
             setConnectionStatus('connected');
           });
 
@@ -570,13 +586,21 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
             console.debug('[BeaverPhone] Message received from WS server:', event.data);
           });
 
-          socket.addEventListener('close', () => {
+          socket.addEventListener('close', (event) => {
+            console.warn(
+              '[BeaverPhone] WebSocket closed.',
+              {
+                code: event.code,
+                reason: event.reason,
+                wasClean: event.wasClean,
+              }
+            );
             setConnectionStatus('disconnected');
             scheduleReconnect();
           });
 
           socket.addEventListener('error', (event) => {
-            console.error('[BeaverPhone] WebSocket error.', event);
+            console.error('[BeaverPhone] WebSocket error event received.', event);
             if (socket === nextSocket) {
               try {
                 socket.close();

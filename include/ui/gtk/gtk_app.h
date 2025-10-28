@@ -14,6 +14,8 @@ private:
     static void on_activate(GtkApplication* application, gpointer user_data);
     static gboolean on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision* decision,
                                      WebKitPolicyDecisionType decision_type, gpointer user_data);
+    static gboolean on_console_message(WebKitWebView* web_view, WebKitConsoleMessage* message,
+                                       gpointer user_data);
     void build_ui(GtkApplication* application);
     void load_language(WebKitWebView* web_view, Language language);
 
