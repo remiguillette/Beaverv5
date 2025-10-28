@@ -153,9 +153,25 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
     return html.str();
 }
 
+namespace {
+
+std::string build_menu_href(Language language, BeaverphoneMenuLinkMode menu_link_mode) {
+    const char* lang_code = language == Language::French ? "fr" : "en";
+    switch (menu_link_mode) {
+        case BeaverphoneMenuLinkMode::kRelativeIndex:
+            return std::string("index.html?lang=") + lang_code;
+        case BeaverphoneMenuLinkMode::kAbsoluteRoot:
+        default:
+            return std::string("/?lang=") + lang_code;
+    }
+}
+
+}  // namespace
+
 std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translations,
                                               Language language,
-                                              const std::string& asset_prefix) {
+                                              const std::string& asset_prefix,
+                                              BeaverphoneMenuLinkMode menu_link_mode) {
     std::ostringstream html;
 
     const char* lang_code = html_lang_code(language);
@@ -169,7 +185,7 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     const std::string switch_to_french = translations.translate("Switch to French", language);
     const std::string switch_to_english = translations.translate("Switch to English", language);
 
-    const std::string menu_href = language == Language::French ? "/?lang=fr" : "/?lang=en";
+    const std::string menu_href = build_menu_href(language, menu_link_mode);
     const std::string beaverphone_french_href = "apps/beaverphone?lang=fr";
     const std::string beaverphone_english_href = "apps/beaverphone?lang=en";
 
