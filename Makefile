@@ -16,11 +16,23 @@ CXXFLAGS += $(shell pkg-config --cflags $(WEBKIT_PKG))
 LDFLAGS += $(shell pkg-config --libs $(WEBKIT_PKG))
 endif
 
+SDBUS_PKG := $(shell pkg-config --exists sdbus-c++-1 && echo sdbus-c++-1)
+ifeq ($(SDBUS_PKG),)
+SDBUS_PKG := $(shell pkg-config --exists sdbus-c++ && echo sdbus-c++)
+endif
+
+ifeq ($(SDBUS_PKG),)
+$(warning sdbus-c++ development package not found. Wi-Fi D-Bus fallback disabled.)
+else
+CXXFLAGS += $(shell pkg-config --cflags $(SDBUS_PKG))
+LDFLAGS += $(shell pkg-config --libs $(SDBUS_PKG))
+endif
+
 TARGET := beaver_kiosk
 SRC_DIR := src
 OBJ_DIR := build
 
-LDFLAGS += 
+LDFLAGS +=
 
 SOURCES := $(shell find $(SRC_DIR) -name '*.cpp')
 OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SOURCES))

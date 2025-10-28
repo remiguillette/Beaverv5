@@ -15,6 +15,17 @@
 #include <sstream>
 #include <string>
 
+#if defined(__has_include)
+#if __has_include(<sdbus-c++/sdbus-c++.h>)
+#define BEAVER_HAVE_SDBUS 1
+#include <sdbus-c++/sdbus-c++.h>
+#endif
+#endif
+
+#if !defined(BEAVER_HAVE_SDBUS)
+#define BEAVER_HAVE_SDBUS 0
+#endif
+
 namespace {
 
 std::string trim(const std::string& input) {
@@ -148,12 +159,11 @@ std::vector<std::uint16_t> parse_tcp_table(const std::filesystem::path& path) {
     return {ports.begin(), ports.end()};
 }
 
-WifiStatus collect_wifi_status() {
+WifiStatus collect_wifi_status_proc() {
     WifiStatus status;
     const std::filesystem::path wireless_path("/proc/net/wireless");
     std::ifstream file(wireless_path);
     if (!file.is_open()) {
-        status.status_text = "Unavailable";
         return status;
     }
 
@@ -214,6 +224,94 @@ WifiStatus collect_wifi_status() {
         status.status_text = "Unavailable";
     }
 
+    return status;
+}
+
+#if BEAVER_HAVE_SDBUS
+
+std::string describe_nm_state(std::uint32_t state) {
+    switch (state) {
+        case 10:
+            return "Asleep";
+        case 20:
+            return "Disconnected";
+        case 30:
+            return "Disconnecting";
+        case 40:
+            return "Connecting";
+        case 50:
+            return "Connected (local)";
+        case 60:
+            return "Connected (site)";
+        case 70:
+            return "Connected (global)";
+        default:
+            return "Unknown";
+    }
+}
+
+WifiStatus collect_wifi_status_dbus() {
+    WifiStatus status;
+    status.interface_name = "NetworkManager";
+
+    try {
+        auto connection = sdbus::createSystemBusConnection();
+        auto proxy =
+            sdbus::createProxy(*connection, "org.freedesktop.NetworkManager",
+                               "/org/freedesktop/NetworkManager");
+
+        sdbus::Variant wireless_enabled_variant;
+        proxy->callMethod("Get")
+            .onInterface("org.freedesktop.DBus.Properties")
+            .withArguments("org.freedesktop.NetworkManager", "WirelessEnabled")
+            .storeResultsTo(wireless_enabled_variant);
+
+        const bool wireless_enabled = wireless_enabled_variant.get<bool>();
+        status.available = true;
+
+        if (!wireless_enabled) {
+            status.connected = false;
+            status.status_text = "Disabled";
+            return status;
+        }
+
+        sdbus::Variant state_variant;
+        proxy->callMethod("Get")
+            .onInterface("org.freedesktop.DBus.Properties")
+            .withArguments("org.freedesktop.NetworkManager", "State")
+            .storeResultsTo(state_variant);
+
+        const std::uint32_t nm_state = state_variant.get<std::uint32_t>();
+        status.connected = (nm_state >= 50U);
+        status.status_text = describe_nm_state(nm_state);
+    } catch (const std::exception& ex) {
+        status.status_text = std::string("D-Bus error: ") + ex.what();
+    }
+
+    return status;
+}
+
+#endif  // BEAVER_HAVE_SDBUS
+
+WifiStatus collect_wifi_status() {
+    if (std::filesystem::exists("/proc/net/wireless")) {
+        WifiStatus status = collect_wifi_status_proc();
+        if (status.available) {
+            return status;
+        }
+    }
+
+#if BEAVER_HAVE_SDBUS
+    {
+        WifiStatus status = collect_wifi_status_dbus();
+        if (status.available || !status.status_text.empty()) {
+            return status;
+        }
+    }
+#endif
+
+    WifiStatus status;
+    status.status_text = "Unavailable";
     return status;
 }
 
