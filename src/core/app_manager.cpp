@@ -16,13 +16,14 @@ std::string locale_directory() {
 
 AppManager::AppManager()
     : apps_({
-          {"BeaverPhone", "violet", "icons/phone.svg", "apps/beaverphone"},
-          {"BeaverSystem", "cyan", "icons/server.svg", ""},
-          {"BeaverAlarm", "amber", "icons/shield-alert.svg", ""},
-          {"BeaverTask", "red", "icons/square-check-big.svg", ""},
-          {"BeaverDoc", "green", "icons/file-text.svg", ""},
-          {"BeaverDebian", "violet", "icons/server-cog.svg", ""},
-          {"BeaverNet", "amber", "icons/chromium.svg", ""}}),
+          {"BeaverPhone", "violet", "icons/phone.svg",
+           {"apps/beaverphone", "/apps/beaverphone"}},
+          {"BeaverSystem", "cyan", "icons/server.svg", {"", ""}},
+          {"BeaverAlarm", "amber", "icons/shield-alert.svg", {"", ""}},
+          {"BeaverTask", "red", "icons/square-check-big.svg", {"", ""}},
+          {"BeaverDoc", "green", "icons/file-text.svg", {"", ""}},
+          {"BeaverDebian", "violet", "icons/server-cog.svg", {"", ""}},
+          {"BeaverNet", "amber", "icons/chromium.svg", {"", ""}}}),
       default_language_(Language::French),
       translation_catalog_(locale_directory()) {
     g_message("AppManager initialized with %zu apps. default_language=%s", apps_.size(),
@@ -47,11 +48,15 @@ std::string AppManager::to_json() const {
 }
 
 std::string AppManager::to_html() const {
-    return to_html(default_language_);
+    return to_html(default_language_, "", MenuRouteMode::kKiosk);
 }
 
 std::string AppManager::to_html(Language language) const {
-    return to_html(language, "");
+    return to_html(language, "", MenuRouteMode::kKiosk);
+}
+
+std::string AppManager::to_html(Language language, MenuRouteMode route_mode) const {
+    return to_html(language, "", route_mode);
 }
 
 std::string AppManager::to_json(Language language) const {
@@ -79,9 +84,10 @@ std::string AppManager::to_json(Language language) const {
     return json.str();
 }
 
-std::string AppManager::to_html(Language language, const std::string& asset_prefix) const {
-    std::string html =
-        generate_menu_page_html(apps_, translation_catalog_, language, asset_prefix);
+std::string AppManager::to_html(Language language, const std::string& asset_prefix,
+                                MenuRouteMode route_mode) const {
+    std::string html = generate_menu_page_html(apps_, translation_catalog_, language, route_mode,
+                                               asset_prefix);
     if (html.empty()) {
         g_warning("AppManager generated empty menu HTML for language: %s",
                   language_to_string(language));
