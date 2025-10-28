@@ -652,7 +652,7 @@ void GtkApp::ensure_remote_navigation_controls(WebKitWebView* web_view) {
     g_message("GtkApp injecting remote navigation controls.");
 #if WEBKIT_CHECK_VERSION(2, 40, 0)
     webkit_web_view_evaluate_javascript(web_view, kRemoteBackButtonScript, -1, nullptr, nullptr,
-                                        nullptr);
+                                        nullptr, nullptr, nullptr);
 #else
     webkit_web_view_run_javascript(web_view, kRemoteBackButtonScript, nullptr, nullptr, nullptr);
 #endif
@@ -666,7 +666,7 @@ void GtkApp::remove_remote_navigation_controls(WebKitWebView* web_view) {
     g_message("GtkApp removing remote navigation controls.");
 #if WEBKIT_CHECK_VERSION(2, 40, 0)
     webkit_web_view_evaluate_javascript(web_view, kRemoveRemoteBackButtonScript, -1, nullptr,
-                                        nullptr, nullptr);
+                                        nullptr, nullptr, nullptr, nullptr);
 #else
     webkit_web_view_run_javascript(web_view, kRemoveRemoteBackButtonScript, nullptr, nullptr,
                                    nullptr);
