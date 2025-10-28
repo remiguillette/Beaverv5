@@ -87,6 +87,7 @@ bool handle_camera_api(const std::string& path, const HttpRequest& request,
         std::ostringstream json;
         json << "{\n";
         json << "  \"protocol\": \"" << config.streaming_protocol << "\",\n";
+        json << "  \"mjpeg\": \"" << config.mjpeg_stream_url << "\",\n";
         json << "  \"playlist\": \"" << config.hls_playlist_url << "\",\n";
         json << "  \"rtsp\": \"" << config.rtsp_uri(false) << "\"\n";
         json << "}\n";

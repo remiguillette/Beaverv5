@@ -872,7 +872,8 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     const bool ptz_ready = cctv_config.ptz_is_ready();
     const std::string rtsp_preview = cctv_config.rtsp_uri(false);
     const bool has_rtsp_preview = !rtsp_preview.empty();
-    const bool stream_ready = (!cctv_config.hls_playlist_url.empty() || has_rtsp_preview);
+    const bool has_mjpeg_stream = !cctv_config.mjpeg_stream_url.empty();
+    const bool stream_ready = has_mjpeg_stream;
     const std::string back_to_menu = translations.translate("Back to menu", language);
     const std::string language_label = translations.translate("Language selection", language);
     const std::string switch_to_french = translations.translate("Switch to French", language);
@@ -991,21 +992,23 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
          << " data-label-prefix=\"" << html_escape(stream_status_label) << "\""
          << " data-label-online=\"" << html_escape(stream_ready_label) << "\""
          << " data-label-offline=\"" << html_escape(stream_offline_label) << "\""
-         << " data-state=\"" << (stream_ready ? "online" : "offline") << "\">"
+         << " data-state=\"offline\">"
          << html_escape(stream_status_label) << ": "
-         << html_escape(stream_ready ? stream_ready_label : stream_offline_label) << "</p>\n";
+         << html_escape(stream_offline_label) << "</p>\n";
     html << "          </div>\n";
     html << "          <div class=\"alarm-cctv__viewport\" role=\"presentation\""
-         << " data-stream-state=\"" << (stream_ready ? "online" : "offline") << "\">\n";
+         << " data-stream-state=\"offline\">\n";
     if (stream_ready) {
-        html << "            <video class=\"alarm-cctv__video\" controls muted autoplay playsinline"
-             << " data-hls-src=\"" << html_escape(cctv_config.hls_playlist_url) << "\"";
+        html << "            <img class=\"alarm-cctv__video\" alt=\""
+             << html_escape(cctv_label) << "\" data-role=\"cctv-stream\""
+             << " loading=\"lazy\" decoding=\"async\" referrerpolicy=\"no-referrer\"";
+        if (has_mjpeg_stream) {
+            html << " data-mjpeg-src=\"" << html_escape(cctv_config.mjpeg_stream_url) << "\"";
+        }
         if (has_rtsp_preview) {
             html << " data-rtsp-src=\"" << html_escape(rtsp_preview) << "\"";
         }
-        html << ">\n";
-        html << "              " << html_escape(stream_offline_label) << "\n";
-        html << "            </video>\n";
+        html << " data-reconnect-delay=\"5000\" />\n";
     } else {
         html << "            <div class=\"alarm-cctv__placeholder\">\n";
         html << "              <span class=\"alarm-cctv__label\">" << html_escape(coming_soon_label)
@@ -1192,49 +1195,52 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     html << "        streamStatus.setAttribute('data-state', state);\n";
     html << "      };\n";
     html << "      if (streamViewport) {\n";
-    html << "        const video = streamViewport.querySelector('video');\n";
-    html << "        if (!video) {\n";
+    html << "        const streamElement = streamViewport.querySelector('[data-role=\\\"cctv-stream\\\"]');\n";
+    html << "        const markOnline = () => {\n";
+    html << "          streamViewport.setAttribute('data-stream-state', 'online');\n";
+    html << "          updateStreamStatus('online');\n";
+    html << "        };\n";
+    html << "        const markOffline = () => {\n";
     html << "          streamViewport.setAttribute('data-stream-state', 'offline');\n";
     html << "          updateStreamStatus('offline');\n";
-    html << "        } else {\n";
-    html << "          const hlsSource = video.getAttribute('data-hls-src');\n";
-    html << "          const markOnline = () => {\n";
-    html << "            streamViewport.setAttribute('data-stream-state', 'online');\n";
-    html << "            updateStreamStatus('online');\n";
-    html << "          };\n";
-    html << "          const markOffline = () => {\n";
-    html << "            streamViewport.setAttribute('data-stream-state', 'offline');\n";
-    html << "            updateStreamStatus('offline');\n";
-    html << "          };\n";
-    html << "          if (!hlsSource) {\n";
-    html << "            markOffline();\n";
-    html << "          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {\n";
-    html << "            video.src = hlsSource;\n";
-    html << "            video.addEventListener('loadedmetadata', markOnline, { once: true });\n";
-    html << "            video.addEventListener('error', markOffline);\n";
-    html << "          } else {\n";
-    html << "            const attachWithHls = () => {\n";
-    html << "              if (!window.Hls) {\n";
-    html << "                markOffline();\n";
-    html << "                return;\n";
-    html << "              }\n";
-    html << "              const hls = new window.Hls();\n";
-    html << "              hls.loadSource(hlsSource);\n";
-    html << "              hls.attachMedia(video);\n";
-    html << "              hls.on(window.Hls.Events.MANIFEST_PARSED, markOnline);\n";
-    html << "              hls.on(window.Hls.Events.ERROR, markOffline);\n";
-    html << "            };\n";
-    html << "            if (window.Hls) {\n";
-    html << "              attachWithHls();\n";
-    html << "            } else {\n";
-    html << "              const script = document.createElement('script');\n";
-    html << "              script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.11/dist/hls.min.js';\n";
-    html << "              script.onload = attachWithHls;\n";
-    html << "              script.onerror = markOffline;\n";
-    html << "              document.head.appendChild(script);\n";
-    html << "            }\n";
-    html << "          }\n";
+    html << "        };\n";
+    html << "        if (!streamElement) {\n";
+    html << "          markOffline();\n";
+    html << "          return;\n";
     html << "        }\n";
+    html << "        const mjpegSource = streamElement.getAttribute('data-mjpeg-src');\n";
+    html << "        if (!mjpegSource) {\n";
+    html << "          markOffline();\n";
+    html << "          return;\n";
+    html << "        }\n";
+    html << "        let reconnectTimer = 0;\n";
+    html << "        const reconnectDelay = Number.parseInt(streamElement.getAttribute('data-reconnect-delay') || '5000', 10);\n";
+    html << "        const connect = () => {\n";
+    html << "          window.clearTimeout(reconnectTimer);\n";
+    html << "          const separator = mjpegSource.includes('?') ? '&' : '?';\n";
+    html << "          const cacheBuster = `_=${Date.now()}`;\n";
+    html << "          streamElement.src = `${mjpegSource}${separator}${cacheBuster}`;\n";
+    html << "        };\n";
+    html << "        const scheduleReconnect = () => {\n";
+    html << "          window.clearTimeout(reconnectTimer);\n";
+    html << "          reconnectTimer = window.setTimeout(connect, reconnectDelay);\n";
+    html << "        };\n";
+    html << "        markOffline();\n";
+    html << "        streamElement.addEventListener('load', () => {\n";
+    html << "          window.clearTimeout(reconnectTimer);\n";
+    html << "          markOnline();\n";
+    html << "        });\n";
+    html << "        streamElement.addEventListener('error', () => {\n";
+    html << "          markOffline();\n";
+    html << "          streamElement.removeAttribute('src');\n";
+    html << "          scheduleReconnect();\n";
+    html << "        });\n";
+    html << "        connect();\n";
+    html << "        document.addEventListener('visibilitychange', () => {\n";
+    html << "          if (document.visibilityState === 'visible' && streamViewport.getAttribute('data-stream-state') !== 'online') {\n";
+    html << "            connect();\n";
+    html << "          }\n";
+    html << "        });\n";
     html << "      }\n";
     html << "      renderDisplay();\n";
     html << "      setMode('idle');\n";

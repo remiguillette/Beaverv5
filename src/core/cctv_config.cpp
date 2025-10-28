@@ -15,7 +15,7 @@ constexpr const char kOnvifPath[] = "onvif/ptz_service";
 constexpr const char kOnvifProfile[] = "Profile_1";
 constexpr const char kPtzUsername[] = "admin";
 constexpr const char kPtzPassword[] = "MC44rg99qc@";
-constexpr const char kHlsPlaylistUrl[] = "http://localhost:8080/streams/beaveralarm/index.m3u8";
+constexpr const char kMjpegStreamUrl[] = "http://localhost:8090/feed.mjpeg";
 
 }  // namespace
 
@@ -25,7 +25,8 @@ bool CctvConfig::is_ready() const noexcept {
                                   rtsp_path.rfind("rtsps://", 0) == 0);
     const bool has_host = !camera_host.empty();
     const bool has_hls = !hls_playlist_url.empty();
-    return has_direct_rtsp || has_host || has_hls;
+    const bool has_mjpeg = !mjpeg_stream_url.empty();
+    return has_direct_rtsp || has_host || has_hls || has_mjpeg;
 }
 
 bool CctvConfig::ptz_is_ready() const noexcept {
@@ -113,8 +114,9 @@ CctvConfig load_cctv_config_from_env() {
     config.username = kPtzUsername;
     config.password = kPtzPassword;
     config.profile_token = kOnvifProfile;
-    config.hls_playlist_url = kHlsPlaylistUrl;
-    config.streaming_protocol = "RTSP";
+    config.hls_playlist_url.clear();
+    config.mjpeg_stream_url = kMjpegStreamUrl;
+    config.streaming_protocol = "MJPEG";
 
     static std::once_flag log_once;
     std::call_once(log_once, [&config]() {
@@ -128,9 +130,9 @@ CctvConfig load_cctv_config_from_env() {
             g_message("Using ONVIF profile token: %s", config.profile_token.c_str());
         }
 
-        if (!config.hls_playlist_url.empty()) {
-            g_message("HLS playlist URL available for BeaverAlarm CCTV: %s",
-                      config.hls_playlist_url.c_str());
+        if (!config.mjpeg_stream_url.empty()) {
+            g_message("MJPEG stream URL available for BeaverAlarm CCTV: %s",
+                      config.mjpeg_stream_url.c_str());
         }
     });
 
