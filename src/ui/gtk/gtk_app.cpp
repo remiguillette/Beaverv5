@@ -379,8 +379,9 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     const bool navigating_to_menu =
         (normalized_path == "/" || normalized_path == "/index.html");
     const bool navigating_to_beaverphone = (normalized_path == "/apps/beaverphone");
+    const bool navigating_to_beaversystem = (normalized_path == "/apps/beaversystem");
 
-    if (!navigating_to_menu && !navigating_to_beaverphone) {
+    if (!navigating_to_menu && !navigating_to_beaverphone && !navigating_to_beaversystem) {
         return FALSE;
     }
 
@@ -394,6 +395,15 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         std::string base_uri = build_base_uri();
         if (html.empty()) {
             g_warning("GtkApp received empty BeaverPhone HTML for language: %s",
+                      language_to_string(language));
+        }
+        webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+    } else if (navigating_to_beaversystem) {
+        std::string html = self->manager_.beaversystem_page_html(
+            language, BeaverSystemMenuLinkMode::kRelativeIndex);
+        std::string base_uri = build_base_uri();
+        if (html.empty()) {
+            g_warning("GtkApp received empty BeaverSystem HTML for language: %s",
                       language_to_string(language));
         }
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());

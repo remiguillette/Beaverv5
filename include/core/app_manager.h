@@ -28,6 +28,11 @@ enum class BeaverphoneMenuLinkMode {
     kRelativeIndex
 };
 
+enum class BeaverSystemMenuLinkMode {
+    kAbsoluteRoot,
+    kRelativeIndex
+};
+
 class AppManager {
 public:
     AppManager();
@@ -53,6 +58,14 @@ public:
     std::string beaverphone_page_html(Language language, const std::string& asset_prefix,
                                       BeaverphoneMenuLinkMode menu_link_mode =
                                           BeaverphoneMenuLinkMode::kAbsoluteRoot) const;
+    std::string beaversystem_page_html() const;
+    std::string beaversystem_page_html(Language language,
+                                       BeaverSystemMenuLinkMode menu_link_mode =
+                                           BeaverSystemMenuLinkMode::kAbsoluteRoot) const;
+    std::string beaversystem_page_html(Language language, const std::string& asset_prefix) const;
+    std::string beaversystem_page_html(Language language, const std::string& asset_prefix,
+                                       BeaverSystemMenuLinkMode menu_link_mode =
+                                           BeaverSystemMenuLinkMode::kAbsoluteRoot) const;
 
 private:
     std::vector<AppTile> apps_;

@@ -1,8 +1,11 @@
 #include "ui/html_renderer.h"
 
+#include <algorithm>
 #include <array>
 #include <cctype>
+#include <iomanip>
 #include <sstream>
+#include <string>
 
 #include "core/translation_catalog.h"
 
@@ -27,6 +30,34 @@ std::string language_toggle_button(const std::string& label, const std::string& 
     html << "\" aria-pressed=\"" << (active ? "true" : "false") << "\" title=\"" << aria_label
          << "\">" << label << "</a>\n";
     return html.str();
+}
+
+std::string html_escape(const std::string& text) {
+    std::string escaped;
+    escaped.reserve(text.size());
+    for (char ch : text) {
+        switch (ch) {
+            case '&':
+                escaped += "&amp;";
+                break;
+            case '<':
+                escaped += "&lt;";
+                break;
+            case '>':
+                escaped += "&gt;";
+                break;
+            case '\"':
+                escaped += "&quot;";
+                break;
+            case '\'':
+                escaped += "&#39;";
+                break;
+            default:
+                escaped.push_back(ch);
+                break;
+        }
+    }
+    return escaped;
 }
 
 std::string resolve_asset_path(const std::string& asset_prefix, const std::string& relative_path) {
@@ -233,15 +264,22 @@ std::string generate_menu_page_html(const std::vector<AppTile>& apps,
 
 namespace {
 
-std::string build_menu_href(Language language, BeaverphoneMenuLinkMode menu_link_mode) {
+std::string build_menu_href_common(Language language, bool use_relative_index) {
     const char* lang_code = language == Language::French ? "fr" : "en";
-    switch (menu_link_mode) {
-        case BeaverphoneMenuLinkMode::kRelativeIndex:
-            return std::string("index.html?lang=") + lang_code;
-        case BeaverphoneMenuLinkMode::kAbsoluteRoot:
-        default:
-            return std::string("/?lang=") + lang_code;
+    if (use_relative_index) {
+        return std::string("index.html?lang=") + lang_code;
     }
+    return std::string("/?lang=") + lang_code;
+}
+
+std::string build_menu_href(Language language, BeaverphoneMenuLinkMode menu_link_mode) {
+    const bool use_relative = (menu_link_mode == BeaverphoneMenuLinkMode::kRelativeIndex);
+    return build_menu_href_common(language, use_relative);
+}
+
+std::string build_menu_href(Language language, BeaverSystemMenuLinkMode menu_link_mode) {
+    const bool use_relative = (menu_link_mode == BeaverSystemMenuLinkMode::kRelativeIndex);
+    return build_menu_href_common(language, use_relative);
 }
 
 }  // namespace
@@ -746,6 +784,433 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
 )";
     html << "</body>\n";
     html << "</html>\n";
+
+    return html.str();
+}
+
+std::string generate_beaversystem_dashboard_html(const TranslationCatalog& translations,
+                                                 Language language,
+                                                 const std::string& asset_prefix,
+                                                 BeaverSystemMenuLinkMode menu_link_mode,
+                                                 const SystemStatusSnapshot& snapshot) {
+    std::ostringstream html;
+    auto append = [&](const std::string& text) { html << text << "\n"; };
+
+    const char* lang_code = html_lang_code(language);
+    const std::string beaversystem_label = translations.translate("BeaverSystem", language);
+    const std::string language_label = translations.translate("Language selection", language);
+    const std::string switch_to_french = translations.translate("Switch to French", language);
+    const std::string switch_to_english = translations.translate("Switch to English", language);
+    const std::string back_to_menu = translations.translate("Back to menu", language);
+    const std::string system_status_title = translations.translate("System status", language);
+    const std::string resource_usage_title = translations.translate("Resource usage", language);
+    const std::string home_wifi_label = translations.translate("Home Wi-Fi", language);
+    const std::string status_label = translations.translate("Status", language);
+    const std::string interface_label = translations.translate("Interface", language);
+    const std::string websocket_server_label = translations.translate("WebSocket server", language);
+    const std::string last_message_label = translations.translate("Last message", language);
+    const std::string system_battery_label = translations.translate("System battery", language);
+    const std::string charge_label = translations.translate("Charge", language);
+    const std::string debian_uptime_label = translations.translate("Debian uptime", language);
+    const std::string uptime_label = translations.translate("Uptime", language);
+    const std::string boot_time_label = translations.translate("Boot time", language);
+    const std::string load_label = translations.translate("Load", language);
+    const std::string websocket_channel_label = translations.translate("WebSocket channel", language);
+    const std::string raw_uptime_label = translations.translate("Raw uptime", language);
+    const std::string network_ports_label = translations.translate("Network ports", language);
+    const std::string list_open_ports_label = translations.translate("List of open ports", language);
+    const std::string no_ports_label = translations.translate("No listening ports detected.", language);
+    const std::string no_telemetry_label = translations.translate("No telemetry received yet.", language);
+    const std::string unavailable_label = translations.translate("Unavailable", language);
+    const std::string not_connected_label = translations.translate("Not connected", language);
+    const std::string connected_label = translations.translate("Connected", language);
+    const std::string updated_label = translations.translate("Updated", language);
+    const std::string unknown_label = translations.translate("Unknown", language);
+    const std::string charging_label = translations.translate("Charging", language);
+    const std::string discharging_label = translations.translate("Discharging", language);
+    const std::string full_label = translations.translate("Full", language);
+    const std::string not_charging_label = translations.translate("Not charging", language);
+
+    const std::string menu_href = build_menu_href(language, menu_link_mode);
+    const bool use_absolute_links = (menu_link_mode == BeaverSystemMenuLinkMode::kAbsoluteRoot);
+    const std::string beaversystem_base = use_absolute_links ? "/apps/beaversystem" : "apps/beaversystem";
+    const std::string beaversystem_french_href = beaversystem_base + "?lang=fr";
+    const std::string beaversystem_english_href = beaversystem_base + "?lang=en";
+
+    const std::string last_updated_value = snapshot.generated_at_iso.empty() ? std::string("--") : snapshot.generated_at_iso;
+    const std::string debian_uptime_value = snapshot.debian.uptime_human.empty() ? unknown_label : snapshot.debian.uptime_human;
+    const std::string debian_boot_value = snapshot.debian.boot_time_iso.empty() ? unknown_label : snapshot.debian.boot_time_iso;
+
+    std::ostringstream load_stream;
+    load_stream << std::fixed << std::setprecision(2) << snapshot.debian.load_average[0] << " / "
+                << snapshot.debian.load_average[1] << " / " << snapshot.debian.load_average[2];
+    const std::string load_average_text = load_stream.str();
+
+    const std::string initial_json = system_status_to_json(snapshot);
+
+    append("<!DOCTYPE html>");
+    append(std::string("<html lang=\"") + lang_code + "\">");
+    append("<head>");
+    append("  <meta charset=\"UTF-8\" />");
+    append("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />");
+    append(std::string("  <title>") + html_escape(beaversystem_label) + "</title>");
+    append("  <link rel=\"stylesheet\" href=\"" + resolve_asset_path(asset_prefix, "css/styles.css") + "\" />");
+    append("</head>");
+    append("<body>");
+    append("  <div id=\"root\">");
+    append("    <div class=\"beaversystem-root\">");
+    append("      <header class=\"system-header\">");
+    append("        <a class=\"system-header__back\" href=\"" + menu_href + "\">");
+    append("          <span class=\"system-header__back-icon\" aria-hidden=\"true\">&larr;</span>");
+    append("          <span class=\"system-header__back-label\">" + html_escape(back_to_menu) + "</span>");
+    append("        </a>");
+    append("        <h1 class=\"system-header__title\">" + html_escape(beaversystem_label) + "</h1>");
+    append("        <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" + html_escape(language_label) + "\">");
+    append(language_toggle_button("FR", beaversystem_french_href, switch_to_french, language == Language::French));
+    append(language_toggle_button("EN", beaversystem_english_href, switch_to_english, language == Language::English));
+    append("        </nav>");
+    append("      </header>");
+    append("      <main class=\"system-dashboard\"");
+    append("            data-label-unavailable=\"" + html_escape(unavailable_label) + "\"");
+    append("            data-label-connected=\"" + html_escape(connected_label) + "\"");
+    append("            data-label-not-connected=\"" + html_escape(not_connected_label) + "\"");
+    append("            data-label-no-ports=\"" + html_escape(no_ports_label) + "\"");
+    append("            data-label-no-telemetry=\"" + html_escape(no_telemetry_label) + "\"");
+    append("            data-label-updated=\"" + html_escape(updated_label) + "\"");
+    append("            data-label-interface=\"" + html_escape(interface_label) + "\"");
+    append("            data-label-unknown=\"" + html_escape(unknown_label) + "\"");
+    append("            data-battery-label-charging=\"" + html_escape(charging_label) + "\"");
+    append("            data-battery-label-discharging=\"" + html_escape(discharging_label) + "\"");
+    append("            data-battery-label-full=\"" + html_escape(full_label) + "\"");
+    append("            data-battery-label-not-charging=\"" + html_escape(not_charging_label) + "\"");
+    append("            data-battery-label-unavailable=\"" + html_escape(unavailable_label) + "\"");
+    append("            data-battery-label-unknown=\"" + html_escape(unknown_label) + "\">");
+    append("        <section class=\"system-section\">");
+    append("          <div class=\"system-section__header\">");
+    append("            <h2 class=\"system-section__title\">" + html_escape(system_status_title) + "</h2>");
+    append("            <p class=\"system-section__meta\">" + html_escape(updated_label) + ": <span data-role=\"updated-value\">" + html_escape(last_updated_value) + "</span></p>");
+    append("          </div>");
+    append("          <div class=\"system-section__grid\">");
+    append("            <article class=\"system-card\">");
+    append("              <h3 class=\"system-card__title\">" + html_escape(home_wifi_label) + "</h3>");
+    append("              <dl class=\"system-card__metrics\">");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(status_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\">");
+    append("                    <span class=\"status-indicator status-indicator--idle\" data-role=\"wifi-status\">" + html_escape(unavailable_label) + "</span>");
+    append("                  </dd>");
+    append("                </div>");
+    append("                <div class=\"system-card__metric\" data-role=\"wifi-interface-row\" hidden>");
+    append("                  <dt class=\"system-card__label\">" + html_escape(interface_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\" data-role=\"wifi-interface\">" + html_escape(unavailable_label) + "</dd>");
+    append("                </div>");
+    append("              </dl>");
+    append("            </article>");
+    append("            <article class=\"system-card\">");
+    append("              <h3 class=\"system-card__title\">" + html_escape(websocket_server_label) + "</h3>");
+    append("              <dl class=\"system-card__metrics\">");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(status_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\">");
+    append("                    <span class=\"status-indicator status-indicator--idle\" data-role=\"ws-status\">" + html_escape(unavailable_label) + "</span>");
+    append("                  </dd>");
+    append("                </div>");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(last_message_label) + "</dt>");
+    append("                  <dd class=\"system-card__value system-card__value--wrap\" data-role=\"ws-last-message\">" + html_escape(no_telemetry_label) + "</dd>");
+    append("                </div>");
+    append("              </dl>");
+    append("            </article>");
+    append("            <article class=\"system-card\">");
+    append("              <h3 class=\"system-card__title\">" + html_escape(system_battery_label) + "</h3>");
+    append("              <dl class=\"system-card__metrics\">");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(charge_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\" data-role=\"battery-status\">" + html_escape(unavailable_label) + "</dd>");
+    append("                </div>");
+    append("              </dl>");
+    append("            </article>");
+    append("          </div>");
+    append("        </section>");
+    append("        <section class=\"system-section\">");
+    append("          <div class=\"system-section__header\">");
+    append("            <h2 class=\"system-section__title\">" + html_escape(resource_usage_title) + "</h2>");
+    append("          </div>");
+    append("          <div class=\"system-section__grid\">");
+    append("            <article class=\"system-card system-card--wide\">");
+    append("              <h3 class=\"system-card__title\">" + html_escape(debian_uptime_label) + "</h3>");
+    append("              <dl class=\"system-card__metrics\">");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(uptime_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\" data-role=\"debian-uptime\">" + html_escape(debian_uptime_value) + "</dd>");
+    append("                </div>");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(boot_time_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\" data-role=\"debian-boot\">" + html_escape(debian_boot_value) + "</dd>");
+    append("                </div>");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(load_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\" data-role=\"debian-load\">" + load_average_text + "</dd>");
+    append("                </div>");
+    append("              </dl>");
+    append("            </article>");
+    append("            <article class=\"system-card\">");
+    append("              <h3 class=\"system-card__title\">" + html_escape(websocket_channel_label) + "</h3>");
+    append("              <dl class=\"system-card__metrics\">");
+    append("                <div class=\"system-card__metric\">");
+    append("                  <dt class=\"system-card__label\">" + html_escape(raw_uptime_label) + "</dt>");
+    append("                  <dd class=\"system-card__value\" data-role=\"ws-uptime\">" + html_escape(unknown_label) + "</dd>");
+    append("                </div>");
+    append("              </dl>");
+    append("            </article>");
+    append("            <article class=\"system-card system-card--ports\">");
+    append("              <h3 class=\"system-card__title\">" + html_escape(network_ports_label) + "</h3>");
+    append("              <div class=\"system-card__body\">");
+    append("                <p class=\"system-card__hint\">" + html_escape(list_open_ports_label) + "</p>");
+    append("                <div class=\"system-ports\" data-role=\"ports-list\">");
+    if (snapshot.network.listening_ports.empty()) {
+        append("                  <p class=\"system-ports__empty\">" + html_escape(no_ports_label) + "</p>");
+    } else {
+        for (std::size_t i = 0; i < snapshot.network.listening_ports.size(); ++i) {
+            append("                  <span class=\"system-port-pill\">" + std::to_string(snapshot.network.listening_ports[i]) + "</span>");
+        }
+    }
+    append("                </div>");
+    append("              </div>");
+    append("            </article>");
+    append("          </div>");
+    append("        </section>");
+    append("      </main>");
+    append("    </div>");
+    append("  </div>");
+    append("  <script id=\"initial-system-status\" type=\"application/json\">");
+    append(initial_json);
+    append("  </script>");
+    append("  <script>");
+    append("    (function() {");
+    append("      const doc = document;");
+    append("      const root = doc.querySelector('.system-dashboard');");
+    append("      if (!root) {");
+    append("        return;");
+    append("      }");
+    append("      const dataset = root.dataset || {};");
+    append("      const strings = {");
+    append("        unavailable: dataset.labelUnavailable || 'Unavailable',");
+    append("        connected: dataset.labelConnected || 'Connected',");
+    append("        notConnected: dataset.labelNotConnected || 'Not connected',");
+    append("        noPorts: dataset.labelNoPorts || 'No listening ports detected.',");
+    append("        noTelemetry: dataset.labelNoTelemetry || 'No telemetry received yet.',");
+    append("        updated: dataset.labelUpdated || 'Updated',");
+    append("        interface: dataset.labelInterface || 'Interface',");
+    append("        unknown: dataset.labelUnknown || 'Unknown',");
+    append("        battery: {");
+    append("          charging: dataset.batteryLabelCharging || 'Charging',");
+    append("          discharging: dataset.batteryLabelDischarging || 'Discharging',");
+    append("          full: dataset.batteryLabelFull || 'Full',");
+    append("          notCharging: dataset.batteryLabelNotCharging || 'Not charging',");
+    append("          unavailable: dataset.batteryLabelUnavailable || dataset.labelUnavailable || 'Unavailable',");
+    append("          unknown: dataset.batteryLabelUnknown || dataset.labelUnknown || 'Unknown'");
+    append("        }");
+    append("      };");
+    append("      const wifiStatusEl = doc.querySelector('[data-role=\"wifi-status\"]');");
+    append("      const wifiInterfaceRow = doc.querySelector('[data-role=\"wifi-interface-row\"]');");
+    append("      const wifiInterfaceEl = doc.querySelector('[data-role=\"wifi-interface\"]');");
+    append("      const wsStatusEl = doc.querySelector('[data-role=\"ws-status\"]');");
+    append("      const wsLastMessageEl = doc.querySelector('[data-role=\"ws-last-message\"]');");
+    append("      const batteryStatusEl = doc.querySelector('[data-role=\"battery-status\"]');");
+    append("      const debianUptimeEl = doc.querySelector('[data-role=\"debian-uptime\"]');");
+    append("      const debianBootEl = doc.querySelector('[data-role=\"debian-boot\"]');");
+    append("      const debianLoadEl = doc.querySelector('[data-role=\"debian-load\"]');");
+    append("      const wsUptimeEl = doc.querySelector('[data-role=\"ws-uptime\"]');");
+    append("      const portsContainer = doc.querySelector('[data-role=\"ports-list\"]');");
+    append("      const updatedValueEl = doc.querySelector('[data-role=\"updated-value\"]');");
+    append("      const statusClasses = ['status-indicator--ok', 'status-indicator--warn', 'status-indicator--idle'];");
+    append("      const setStatus = (el, text, tone) => {");
+    append("        if (!el) {");
+    append("          return;");
+    append("        }");
+    append("        el.textContent = text;");
+    append("        statusClasses.forEach((cls) => el.classList.remove(cls));");
+    append("        const toneClass = tone === 'ok' ? 'status-indicator--ok' : tone === 'warn' ? 'status-indicator--warn' : 'status-indicator--idle';");
+    append("        el.classList.add(toneClass);");
+    append("      };");
+    append("      const setText = (el, text) => {");
+    append("        if (el) {");
+    append("          el.textContent = text;");
+    append("        }");
+    append("      };");
+    append("      const formatDuration = (seconds) => {");
+    append("        if (!Number.isFinite(seconds) || seconds < 0) {");
+    append("          return strings.unknown;");
+    append("        }");
+    append("        const total = Math.floor(seconds);");
+    append("        const days = Math.floor(total / 86400);");
+    append("        const hours = Math.floor((total % 86400) / 3600);");
+    append("        const minutes = Math.floor((total % 3600) / 60);");
+    append("        const secs = total % 60;");
+    append("        const pad = (value) => value.toString().padStart(2, '0');");
+    append("        const parts = [];");
+    append("        if (days > 0) {");
+    append("          parts.push(`${days}d`);");
+    append("        }");
+    append("        parts.push(`${pad(hours)}h`);");
+    append("        parts.push(`${pad(minutes)}m`);");
+    append("        parts.push(`${pad(secs)}s`);");
+    append("        return parts.join(' ');");
+    append("      };");
+    append("      const renderPorts = (ports) => {");
+    append("        if (!portsContainer) {");
+    append("          return;");
+    append("        }");
+    append("        portsContainer.textContent = '';");
+    append("        if (!Array.isArray(ports) || ports.length === 0) {");
+    append("          const message = doc.createElement('p');");
+    append("          message.className = 'system-ports__empty';");
+    append("          message.textContent = strings.noPorts;");
+    append("          portsContainer.appendChild(message);");
+    append("          return;");
+    append("        }");
+    append("        const unique = Array.from(new Set(ports)).sort((a, b) => a - b);");
+    append("        unique.forEach((port) => {");
+    append("          const pill = doc.createElement('span');");
+    append("          pill.className = 'system-port-pill';");
+    append("          pill.textContent = port;");
+    append("          portsContainer.appendChild(pill);");
+    append("        });");
+    append("      };");
+    append("      const renderBattery = (battery) => {");
+    append("        if (!batteryStatusEl) {");
+    append("          return;");
+    append("        }");
+    append("        if (!battery || (!battery.present && !battery.state)) {");
+    append("          batteryStatusEl.textContent = strings.battery.unavailable;");
+    append("          return;");
+    append("        }");
+    append("        const stateKey = (battery.state || '').toString().toLowerCase();");
+    append("        const lookup = {");
+    append("          charging: strings.battery.charging,");
+    append("          discharging: strings.battery.discharging,");
+    append("          full: strings.battery.full,");
+    append("          'not charging': strings.battery.notCharging,");
+    append("          'not-charging': strings.battery.notCharging,");
+    append("          unknown: strings.battery.unknown,");
+    append("          unavailable: strings.battery.unavailable");
+    append("        };");
+    append("        const mapped = lookup[stateKey] || battery.state || strings.battery.unknown;");
+    append("        let percentageText = null;");
+    append("        if (typeof battery.percentage === 'number' && Number.isFinite(battery.percentage)) {");
+    append("          const safePercent = Math.max(0, Math.min(100, Math.round(battery.percentage)));");
+    append("          percentageText = `${safePercent}%`;");
+    append("        }");
+    append("        if (battery.present && percentageText) {");
+    append("          batteryStatusEl.textContent = `${percentageText} – ${mapped}`;");
+    append("        } else if (battery.present) {");
+    append("          batteryStatusEl.textContent = mapped;");
+    append("        } else {");
+    append("          batteryStatusEl.textContent = mapped || strings.battery.unavailable;");
+    append("        }");
+    append("      };");
+    append("      const renderData = (data) => {");
+    append("        if (!data || typeof data !== 'object') {");
+    append("          return;");
+    append("        }");
+    append("        const wifi = data.wifi || {};");
+    append("        if (wifiStatusEl) {");
+    append("          if (wifi.available) {");
+    append("            if (wifi.connected) {");
+    append("              setStatus(wifiStatusEl, strings.connected, 'ok');");
+    append("            } else {");
+    append("              setStatus(wifiStatusEl, strings.notConnected, 'warn');");
+    append("            }");
+    append("          } else {");
+    append("            setStatus(wifiStatusEl, strings.unavailable, 'idle');");
+    append("          }");
+    append("        }");
+    append("        if (wifiInterfaceRow && wifiInterfaceEl) {");
+    append("          if (wifi.available && wifi.interface) {");
+    append("            wifiInterfaceRow.hidden = false;");
+    append("            setText(wifiInterfaceEl, wifi.interface);");
+    append("          } else {");
+    append("            wifiInterfaceRow.hidden = true;");
+    append("            setText(wifiInterfaceEl, strings.unavailable);");
+    append("          }");
+    append("        }");
+    append("        const websocket = data.websocket || {};");
+    append("        if (wsStatusEl) {");
+    append("          if (websocket.listening) {");
+    append("            setStatus(wsStatusEl, strings.connected, 'ok');");
+    append("          } else if (websocket.address) {");
+    append("            setStatus(wsStatusEl, strings.notConnected, 'warn');");
+    append("          } else {");
+    append("            setStatus(wsStatusEl, strings.unavailable, 'idle');");
+    append("          }");
+    append("        }");
+    append("        const lastMessage = (websocket.lastMessage || '').toString().trim();");
+    append("        setText(wsLastMessageEl, lastMessage ? lastMessage : strings.noTelemetry);");
+    append("        renderBattery(data.battery);");
+    append("        if (debianUptimeEl && data.debian) {");
+    append("          setText(debianUptimeEl, data.debian.uptimeHuman || strings.unknown);");
+    append("          setText(debianBootEl, data.debian.bootTime || strings.unknown);");
+    append("          if (Array.isArray(data.debian.loadAverage) && data.debian.loadAverage.length >= 3) {");
+    append("            const formatted = data.debian.loadAverage.slice(0, 3).map((value) => {");
+    append("              return Number.isFinite(value) ? Number(value).toFixed(2) : '0.00';");
+    append("            }).join(' / ');");
+    append("            setText(debianLoadEl, formatted);");
+    append("          } else {");
+    append("            setText(debianLoadEl, strings.unknown);");
+    append("          }");
+    append("        }");
+    append("        if (wsUptimeEl) {");
+    append("          const uptimeSeconds = websocket.uptimeSeconds;");
+    append("          setText(wsUptimeEl, formatDuration(typeof uptimeSeconds === 'number' ? uptimeSeconds : -1));");
+    append("        }");
+    append("        renderPorts(data.network ? data.network.listeningPorts : null);");
+    append("        if (updatedValueEl) {");
+    append("          setText(updatedValueEl, data.generatedAt || strings.unknown);");
+    append("        }");
+    append("      };");
+    append("      const parseInitial = () => {");
+    append("        const script = doc.getElementById('initial-system-status');");
+    append("        if (!script) {");
+    append("          return null;");
+    append("        }");
+    append("        try {");
+    append("          return JSON.parse(script.textContent || '{}');");
+    append("        } catch (error) {");
+    append("          console.warn('[BeaverSystem] Unable to parse initial system status payload.', error);");
+    append("          return null;");
+    append("        }");
+    append("      };");
+    append("      const fetchLatest = () => {");
+    append("        if (typeof fetch !== 'function') {");
+    append("          return;");
+    append("        }");
+    append("        fetch('/api/system/status', { cache: 'no-cache' })");
+    append("          .then((response) => {");
+    append("            if (!response.ok) {");
+    append("              throw new Error(`HTTP ${response.status}`);");
+    append("            }");
+    append("            return response.json();");
+    append("          })");
+    append("          .then((payload) => {");
+    append("            renderData(payload);");
+    append("          })");
+    append("          .catch((error) => {");
+    append("            console.warn('[BeaverSystem] Failed to refresh system status.', error);");
+    append("          });");
+    append("      };");
+    append("      const initial = parseInitial();");
+    append("      if (initial) {");
+    append("        renderData(initial);");
+    append("      }");
+    append("      if (window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {");
+    append("        fetchLatest();");
+    append("        window.setInterval(fetchLatest, 15000);");
+    append("      }");
+    append("    })();");
+    append("  </script>");
+    append("</body>");
+    append("</html>");
 
     return html.str();
 }
