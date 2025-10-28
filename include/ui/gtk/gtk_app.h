@@ -17,8 +17,5 @@ private:
     void build_ui(GtkApplication* application);
     void load_language(WebKitWebView* web_view, Language language);
 
-    void suppress_next_decide_policy();
-
     AppManager& manager_;
-    bool suppress_decide_policy_request_ = false;
 };
