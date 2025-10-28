@@ -20,10 +20,50 @@ std::string get_env_or_default(const char* name, const char* fallback = "") {
 }  // namespace
 
 bool CctvConfig::is_ready() const noexcept {
+    const bool has_direct_rtsp = !rtsp_path.empty() &&
+                                 (rtsp_path.rfind("rtsp://", 0) == 0 ||
+                                  rtsp_path.rfind("rtsps://", 0) == 0);
+    const bool has_host = !camera_host.empty();
+    const bool has_hls = !hls_playlist_url.empty();
+    return has_direct_rtsp || has_host || has_hls;
+}
+
+bool CctvConfig::ptz_is_ready() const noexcept {
     return !camera_host.empty() && !username.empty() && !password.empty();
 }
 
 std::string CctvConfig::rtsp_uri(bool include_credentials) const {
+    const auto is_absolute_rtsp = [](const std::string& value) {
+        return value.rfind("rtsp://", 0) == 0 || value.rfind("rtsps://", 0) == 0;
+    };
+
+    if (is_absolute_rtsp(rtsp_path)) {
+        if (!include_credentials || username.empty()) {
+            return rtsp_path;
+        }
+
+        const std::size_t scheme_end = rtsp_path.find("://");
+        if (scheme_end == std::string::npos) {
+            return rtsp_path;
+        }
+
+        const std::size_t authority_start = scheme_end + 3;
+        const std::size_t authority_end = rtsp_path.find('@', authority_start);
+        if (authority_end != std::string::npos) {
+            return rtsp_path;
+        }
+
+        std::ostringstream uri;
+        uri << rtsp_path.substr(0, authority_start);
+        uri << username;
+        if (!password.empty()) {
+            uri << ':' << password;
+        }
+        uri << '@';
+        uri << rtsp_path.substr(authority_start);
+        return uri.str();
+    }
+
     if (camera_host.empty()) {
         return {};
     }
@@ -78,10 +118,13 @@ CctvConfig load_cctv_config_from_env() {
 
     static std::once_flag log_once;
     std::call_once(log_once, [&config]() {
+        const std::string direct_rtsp = config.rtsp_uri(false);
         if (!config.camera_host.empty()) {
             g_message("Loaded BeaverAlarm CCTV host: %s", config.camera_host.c_str());
+        } else if (!direct_rtsp.empty()) {
+            g_message("Using direct RTSP URI for BeaverAlarm CCTV feed: %s", direct_rtsp.c_str());
         } else {
-            g_warning("BEAVER_ALARM_CCTV_HOST is not set; CCTV feed disabled.");
+            g_warning("BEAVER_ALARM_CCTV_HOST is not set and no direct RTSP URI provided; CCTV feed disabled.");
         }
 
         if (!config.profile_token.empty()) {

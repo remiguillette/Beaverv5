@@ -14,6 +14,7 @@ struct CctvConfig {
     std::string streaming_protocol;
 
     [[nodiscard]] bool is_ready() const noexcept;
+    [[nodiscard]] bool ptz_is_ready() const noexcept;
     [[nodiscard]] std::string rtsp_uri(bool include_credentials = false) const;
     [[nodiscard]] std::string onvif_endpoint() const;
 };
