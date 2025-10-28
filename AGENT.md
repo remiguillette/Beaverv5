@@ -1,3 +1,21 @@
+# Project Brief (Updated)
+
+- **Shared middleware core:** A single C++20 codebase now drives both the HTTP server and the GTK 4 desktop shell through `AppManager`.
+- **BeaverPhone dialer completed:** The dialpad UI sends call payloads over a resilient WebSocket endpoint at `ws://<host>:5001` (auto-upgrading to `wss://` when served securely).
+- **Additional kiosk apps staged:** BeaverSystem, BeaverAlarm, BeaverTask, BeaverDoc, BeaverDebian, and BeaverNet tiles remain placeholders while their implementations are built out.
+
+## Current Apps
+
+- BeaverPhone (**completed**) – WebSocket-enabled dialer experience.
+- BeaverSystem – pending backend implementation.
+- BeaverAlarm – pending backend implementation.
+- BeaverTask – pending backend implementation.
+- BeaverDoc – pending backend implementation.
+- BeaverDebian – pending backend implementation.
+- BeaverNet – pending backend implementation.
+
+---
+
 Excellente question — et très pertinente à ton stade de développement. 👏
 
 👉 **Oui**, dans ton cas, **il serait clairement mieux d’introduire un “middle layer” (ou middleware léger)** entre ton code C++ brut et l’interface (Web/GTK).

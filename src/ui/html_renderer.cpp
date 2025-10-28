@@ -253,7 +253,6 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     const std::string enter_number = translations.translate("Enter a number", language);
     const std::string call_label = translations.translate("Call", language);
     const std::string clear_label = translations.translate("Clear", language);
-    const std::string description = translations.translate("BeaverPhone description", language);
     const std::string extensions_title = translations.translate("Phone extensions", language);
     const std::string extension_prefix = translations.translate("Extension prefix", language);
     const std::string connection_connected = translations.translate("Connected", language);
@@ -356,7 +355,6 @@ std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translat
     html << "          </div>\n";
     html << "        </section>\n";
     html << "        <aside class=\"dialpad-details\">\n";
-    html << "          <p class=\"dialpad-description\">" << description << "</p>\n";
     html << "          <h2 class=\"extensions-title\">" << extensions_title << "</h2>\n";
     html << "          <div class=\"extension-list\">\n";
 
