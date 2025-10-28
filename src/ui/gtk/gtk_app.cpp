@@ -7,6 +7,7 @@
 #include <string>
 
 #include <webkit2/webkit2.h>
+#include <glib.h>
 
 GtkApp::GtkApp(AppManager& manager) : manager_(manager) {}
 
@@ -33,6 +34,39 @@ std::string build_base_uri() {
         uri.push_back('/');
     }
     return uri;
+}
+
+Language language_from_query(const std::string& query, Language fallback) {
+    Language language = fallback;
+    std::stringstream query_stream(query);
+    std::string parameter;
+    while (std::getline(query_stream, parameter, '&')) {
+        const std::size_t separator_position = parameter.find('=');
+        if (separator_position == std::string::npos) {
+            continue;
+        }
+
+        std::string key = parameter.substr(0, separator_position);
+        std::string value = parameter.substr(separator_position + 1);
+        std::transform(key.begin(), key.end(), key.begin(), [](unsigned char ch) {
+            return static_cast<char>(std::tolower(ch));
+        });
+        if (key != "lang") {
+            continue;
+        }
+
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+            return static_cast<char>(std::tolower(ch));
+        });
+        if (value == "en") {
+            language = Language::English;
+        } else if (value == "fr") {
+            language = Language::French;
+        }
+        break;
+    }
+
+    return language;
 }
 }  // namespace
 
@@ -79,57 +113,42 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         return FALSE;
     }
 
-    std::string uri_string(uri);
-    const std::size_t query_position = uri_string.find('?');
-    if (query_position == std::string::npos) {
+    GUri* parsed_uri = g_uri_parse(uri, G_URI_FLAGS_NONE, nullptr);
+    if (parsed_uri == nullptr) {
         return FALSE;
     }
 
-    std::string query = uri_string.substr(query_position + 1);
-    std::stringstream query_stream(query);
-    std::string parameter;
-    std::string language_value;
+    const gchar* path = g_uri_get_path(parsed_uri);
+    const gchar* query = g_uri_get_query(parsed_uri);
 
-    while (std::getline(query_stream, parameter, '&')) {
-        const std::size_t separator_position = parameter.find('=');
-        if (separator_position == std::string::npos) {
-            continue;
-        }
+    std::string path_string = path != nullptr ? path : "";
+    std::string query_string = query != nullptr ? query : "";
 
-        std::string key = parameter.substr(0, separator_position);
-        std::string value = parameter.substr(separator_position + 1);
-        std::transform(key.begin(), key.end(), key.begin(), [](unsigned char ch) {
-            return static_cast<char>(std::tolower(ch));
-        });
-        if (key == "lang") {
-            std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
-                return static_cast<char>(std::tolower(ch));
-            });
-            language_value = std::move(value);
-            break;
-        }
-    }
+    g_uri_unref(parsed_uri);
 
-    if (language_value.empty()) {
+    if (path_string.empty()) {
         return FALSE;
     }
 
-    Language language = self->manager_.get_default_language();
-    bool handled = false;
-    if (language_value == "en") {
-        language = Language::English;
-        handled = true;
-    } else if (language_value == "fr") {
-        language = Language::French;
-        handled = true;
-    }
+    Language language = language_from_query(query_string, self->manager_.get_default_language());
 
-    if (!handled) {
+    const bool navigating_to_menu = (path_string == "/" || path_string == "/index.html");
+    const bool navigating_to_beaverphone = (path_string == "/apps/beaverphone");
+
+    if (!navigating_to_menu && !navigating_to_beaverphone) {
         return FALSE;
     }
 
     self->manager_.set_default_language(language);
-    self->load_language(web_view, language);
+
+    if (navigating_to_menu) {
+        self->load_language(web_view, language);
+    } else if (navigating_to_beaverphone) {
+        std::string html = self->manager_.beaverphone_page_html(language);
+        std::string base_uri = build_base_uri();
+        webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+    }
+
     webkit_policy_decision_ignore(decision);
     return TRUE;
 }
