@@ -235,6 +235,7 @@ body {
   font-size: clamp(1.75rem, 4vw, 2.75rem);
   font-weight: 600;
   flex: 1 1 200px;
+  color: var(--accent-amber);
 }
 
 .phone-header__accent {
@@ -263,12 +264,19 @@ body {
   box-shadow: 0 24px 60px rgba(10, 10, 24, 0.45);
 }
 
+.dialpad-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .dialpad-title {
   margin: 0;
   font-size: 1.1rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--accent-amber);
 }
 
 .dialpad-display {
@@ -283,11 +291,25 @@ body {
   font-size: 1.75rem;
   font-weight: 600;
   letter-spacing: 0.1em;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.dialpad-display__placeholder {
+.dialpad-display__value {
+  color: var(--text-main);
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.dialpad-display.is-empty {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+.dialpad-display.is-empty .dialpad-display__value {
   color: var(--text-muted);
   font-size: 0.9rem;
+  font-weight: 500;
   letter-spacing: normal;
   text-transform: uppercase;
 }
@@ -328,23 +350,73 @@ body {
   letter-spacing: 0.2em;
 }
 
-.dialpad-call-button {
+.dialpad-actions {
   margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialpad-action {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.dialpad-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.dialpad-call-button {
   border: none;
   border-radius: 999px;
-  padding: 0.9rem 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #22d3ee, #47d17b);
-  color: #041218;
+  width: 4rem;
+  height: 4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ffba6b, #ff7a18);
+  color: #2f1900;
   cursor: pointer;
-  box-shadow: 0 16px 35px rgba(0, 220, 180, 0.35);
+  box-shadow: 0 18px 40px rgba(255, 122, 24, 0.35);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .dialpad-call-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 22px 45px rgba(0, 220, 180, 0.45);
+  box-shadow: 0 26px 55px rgba(255, 122, 24, 0.45);
+}
+
+.dialpad-call-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.dialpad-call-button__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.dialpad-action--clear {
+  flex: 1;
+  text-align: center;
+}
+
+.dialpad-action--clear:focus-visible,
+.dialpad-call-button:focus-visible {
+  outline: 2px solid rgba(255, 186, 107, 0.8);
+  outline-offset: 2px;
 }
 
 .dialpad-details {
@@ -357,6 +429,45 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-top: 3px solid var(--accent-amber);
   box-shadow: 0 20px 40px rgba(10, 10, 24, 0.35);
+}
+
+.connection-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.connection-indicator__dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ffba6b, #ff7a18);
+  box-shadow: 0 0 0 3px rgba(255, 122, 24, 0.25);
+}
+
+.connection-indicator[data-status='connecting'] {
+  color: #ffd9a8;
+}
+
+.connection-indicator[data-status='connecting'] .connection-indicator__dot {
+  background: linear-gradient(135deg, #ffd194, #ff9a3c);
+  box-shadow: 0 0 0 3px rgba(255, 154, 60, 0.3);
+}
+
+.connection-indicator[data-status='connected'] {
+  color: #ffeede;
+}
+
+.connection-indicator[data-status='connected'] .connection-indicator__dot {
+  background: linear-gradient(135deg, #61d836, #4cbf1d);
+  box-shadow: 0 0 0 3px rgba(76, 191, 29, 0.25);
 }
 
 .dialpad-description {
