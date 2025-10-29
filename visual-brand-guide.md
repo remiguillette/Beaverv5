@@ -236,9 +236,9 @@ Indicators are rendered as list items with glowing badges (alarm-status__badge--
 
 State styling relies on data-state attributes. Offline tones down the badge, while Alert intensifies the red accent and updates the value label to the translated “Alert”.
 
-CCTV PTZ Placeholder (alarm-card--cctv):
+Video Integration:
 
-A dashed inset viewport communicates a reserved space for the future live feed. The placeholder copy uses uppercase amber lettering to signal its importance while the muted hint text explains the roadmap (“Live PTZ controls and video will display here.”).
+Live camera duties now sit outside of the kiosk shell. When a site needs monitoring, operators launch Debian’s webcam tooling (e.g., `gst-launch-1.0 v4l2src device=/dev/video0 ! videoconvert ! autovideosink`) to project the USB feed directly. The BeaverAlarm layout therefore concentrates on keypad and status cards without reserving UI real estate for an embedded stream.
 
 Responsive Behavior:
 

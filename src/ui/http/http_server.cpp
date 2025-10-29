@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include "core/system_status.h"
-#include "ui/http/api_camera.h"
 
 HttpServerApp* HttpServerApp::active_instance_ = nullptr;
 
@@ -205,9 +204,7 @@ void HttpServerApp::handle_request(int client_socket) {
         return true;
     };
 
-    if (handle_camera_api(path, request, query_parameters, response)) {
-        // API response already populated.
-    } else if (path == "/" || path == "/index.html") {
+    if (path == "/" || path == "/index.html") {
         response.body =
             manager_.to_html(language, kHttpAssetPrefix, MenuRouteMode::kHttpServer);
         response.headers["Content-Type"] = "text/html; charset=utf-8";

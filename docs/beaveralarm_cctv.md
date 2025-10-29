@@ -1,93 +1,38 @@
-# BeaverAlarm CCTV Integration Guide
+# BeaverAlarm USB Webcam Notes
 
-BeaverAlarm now exposes an ONVIF-ready PTZ control surface and embeds an HLS video feed for the "BeaverAlarm CCTV PTZ IP CAM" source.
-This document explains how to configure the camera credentials securely, run the HLS transcoding pipeline, and exercise the PTZ REST API.
+BeaverAlarm now assumes that live video is handled by Debian's built-in webcam tooling instead of a bespoke CCTV pipeline. The kiosk shell focuses on keypad and status experiences while operators launch a separate viewer when a feed is required.
 
-## 1. Streaming technology
+## 1. Direct capture commands
 
-* **Protocol:** HTTP Live Streaming (HLS)
-* **Rationale:** HLS is well supported by browsers, plays nicely with caching/CDNs, and can be produced directly from the RTSP
-  feed using the FFmpeg toolchain (which relies on `libavformat`). The BeaverAlarm frontend loads the playlist URL exposed by the
-  backend configuration and falls back to `hls.js` if the browser lacks native HLS playback.
-
-## 2. Connection details
-
-BeaverAlarm now ships with baked-in CCTV settings so the demo camera works out of the box. The defaults live in
-`src/core/cctv_config.cpp` and resolve to the following values:
-
-| Setting | Value |
-| --- | --- |
-| RTSP URI | `rtsp://admin:MC44rg99qc%40@192.168.1.47:554/cam/realmonitor?channel=1&subtype=1` |
-| Camera host | `192.168.1.47` |
-| PTZ credentials | `admin` / `MC44rg99qc@` |
-| ONVIF path | `onvif/ptz_service` |
-| ONVIF profile token | `Profile_1` |
-| HLS playlist URL | `http://localhost:8080/streams/beaveralarm/index.m3u8` |
-
-Adjust those constants directly in `load_cctv_config_from_env()` if your network uses a different address or credentials.
-
-## 3. Producing the HLS stream (FFmpeg / libavformat)
-
-The following FFmpeg command (powered by `libavformat`/`libavcodec`) pulls the RTSP feed and emits an HLS playlist that BeaverAlarm
-consumes:
+Use standard V4L2 sources to open a USB webcam without proxy servers or MJPEG gateways:
 
 ```bash
-ffmpeg -rtsp_transport tcp \
-  -i "rtsp://admin:MC44rg99qc%40@192.168.1.47:554/cam/realmonitor?channel=1&subtype=1" \
-  -c:v copy -c:a aac -f hls \
-  -hls_time 2 -hls_list_size 6 -hls_flags delete_segments+program_date_time \
-  /var/www/html/streams/beaveralarm/index.m3u8
+gst-launch-1.0 v4l2src device=/dev/video0 ! videoconvert ! autovideosink
 ```
-
-If your RTSP feed is public, you can remove the credentials segment entirely and point FFmpeg at the
-direct URI reported by the camera, for example:
 
 ```bash
-ffmpeg -rtsp_transport tcp \
-  -i "rtsp://[192.168.1.47]/cam/realmonitor?channel=1&subtype=1" \
-  -c:v copy -c:a aac -f hls \
-  -hls_time 2 -hls_list_size 6 -hls_flags delete_segments+program_date_time \
-  /var/www/html/streams/beaveralarm/index.m3u8
+ffmpeg -f v4l2 -i /dev/video0 -f sdl "USB Camera"
 ```
 
-Serve the resulting directory (`/var/www/html/streams/beaveralarm/`) over HTTPS or behind an authenticated gateway so that
-the configured playlist URL (`http://localhost:8080/streams/beaveralarm/index.m3u8` by default) points to a reachable resource
-for the kiosk.
+Both commands stream pixels straight from the kernel to the GPU with no intermediate network protocol, so the old `feed.mjpeg` endpoint and “connection refused” errors disappear.
 
-## 4. PTZ REST API
+## 2. Embedding in custom GTK utilities
 
-The HTTP backend exposes ONVIF PTZ helpers under `/api/ptz`:
+The same pipeline can be embedded inside a C++/GTK helper if you need an on-device monitor:
 
-| Action | Request |
-| --- | --- |
-| Pan left | `POST /api/ptz?action=left` |
-| Pan right | `POST /api/ptz?action=right` |
-| Tilt up | `POST /api/ptz?action=up` |
-| Tilt down | `POST /api/ptz?action=down` |
-| Zoom in | `POST /api/ptz?action=zoom_in` |
-| Zoom out | `POST /api/ptz?action=zoom_out` |
-| Stop motion | `POST /api/ptz?action=stop` |
+```cpp
+GstElement* pipeline = gst_parse_launch(
+    "v4l2src device=/dev/video0 ! videoconvert ! autovideosink",
+    nullptr);
+gst_element_set_state(pipeline, GST_STATE_PLAYING);
+```
 
-Every request returns JSON indicating whether the ONVIF SOAP call succeeded. When `libcurl` is unavailable at runtime the
-controller logs the prepared SOAP payload but reports an error so operators can spot missing dependencies.
+Keep the pipeline scoped to the helper process; the kiosk UI no longer provisions overlays, PTZ controls, or environment variables for camera setup.
 
-## 5. Live stream metadata endpoint
+## 3. Operational guidance
 
-`GET /api/cctv/stream` returns the configured protocol, playlist URL, and RTSP URI preview so auxiliary dashboards can verify the
-camera wiring without exposing secrets in the HTML markup.
+* Treat the webcam session as an operator tool—launch it when maintenance staff need a live view and close it when they are done.
+* If multiple devices are attached, enumerate them under `/dev/video*` and point the pipeline at the desired node.
+* Packaging this helper as a `.desktop` shortcut keeps the workflow consistent with the rest of the BeaverAlarm console.
 
-## 6. Frontend behaviour
-
-* The BeaverAlarm dashboard auto-loads the HLS playlist when configuration is valid and toggles status labels between
-  "Stream ready" and "Stream offline".
-* PTZ control buttons issue REST calls and show a busy state while the request is in flight.
-* When configuration is incomplete, the UI displays guidance pulled from the translation catalog instead of exposing
-  partial credentials.
-
-## 7. Troubleshooting checklist
-
-1. Confirm the values baked into `src/core/cctv_config.cpp` match your camera's host, credentials, and playlist URL.
-2. Ensure the FFmpeg process is reachable from the kiosk (playlist served over HTTP/HTTPS).
-3. Verify ONVIF credentials by cURLing the PTZ endpoint manually (e.g. `curl -u admin:change-me http://<camera>/onvif/ptz_service`).
-4. Watch the kiosk logs for messages starting with `PTZ` to confirm SOAP commands are acknowledged by the camera.
-
+By leaning on Debian’s webcam stack we avoid maintaining ONVIF credentials, RTSP conversion jobs, and libcurl SOAP calls while still delivering live video when it is genuinely needed.

@@ -7,7 +7,6 @@
 #include <sstream>
 #include <string>
 
-#include "core/cctv_config.h"
 #include "core/translation_catalog.h"
 
 namespace {
@@ -851,29 +850,6 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     const std::string online_label = translations.translate("Online", language);
     const std::string offline_label = translations.translate("Offline", language);
     const std::string alert_status_label = translations.translate("Alert", language);
-    const std::string cctv_label = translations.translate("CCTV PTZ feed", language);
-    const std::string coming_soon_label = translations.translate("Coming soon", language);
-    const std::string cctv_hint =
-        translations.translate("Live PTZ controls and video will display here.", language);
-    const std::string stream_status_label = translations.translate("Stream status", language);
-    const std::string stream_ready_label = translations.translate("Stream ready", language);
-    const std::string stream_offline_label = translations.translate("Stream offline", language);
-    const std::string ptz_controls_label = translations.translate("PTZ controls", language);
-    const std::string pan_left_label = translations.translate("Pan left", language);
-    const std::string pan_right_label = translations.translate("Pan right", language);
-    const std::string tilt_up_label = translations.translate("Tilt up", language);
-    const std::string tilt_down_label = translations.translate("Tilt down", language);
-    const std::string zoom_in_label = translations.translate("Zoom in", language);
-    const std::string zoom_out_label = translations.translate("Zoom out", language);
-    const std::string stop_motion_label = translations.translate("Stop motion", language);
-    const std::string configure_cctv_label = translations.translate(
-        "Update CCTV connection details to enable the feed.", language);
-    const CctvConfig cctv_config = load_cctv_config_from_env();
-    const bool ptz_ready = cctv_config.ptz_is_ready();
-    const std::string rtsp_preview = cctv_config.rtsp_uri(false);
-    const bool has_rtsp_preview = !rtsp_preview.empty();
-    const bool has_mjpeg_stream = !cctv_config.mjpeg_stream_url.empty();
-    const bool stream_ready = has_mjpeg_stream;
     const std::string back_to_menu = translations.translate("Back to menu", language);
     const std::string language_label = translations.translate("Language selection", language);
     const std::string switch_to_french = translations.translate("Switch to French", language);
@@ -984,89 +960,6 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
 
     html << "          </ul>\n";
     html << "        </section>\n";
-    html << "        <section class=\"alarm-card alarm-card--cctv\" aria-labelledby=\"alarm-cctv-title\">\n";
-    html << "          <div class=\"alarm-card__header\">\n";
-    html << "            <h2 id=\"alarm-cctv-title\" class=\"alarm-card__title\">"
-         << html_escape(cctv_label) << "</h2>\n";
-    html << "            <p class=\"alarm-card__subtitle\" data-role=\"stream-status\""
-         << " data-label-prefix=\"" << html_escape(stream_status_label) << "\""
-         << " data-label-online=\"" << html_escape(stream_ready_label) << "\""
-         << " data-label-offline=\"" << html_escape(stream_offline_label) << "\""
-         << " data-state=\"offline\">"
-         << html_escape(stream_status_label) << ": "
-         << html_escape(stream_offline_label) << "</p>\n";
-    html << "          </div>\n";
-    html << "          <div class=\"alarm-cctv__viewport\" role=\"presentation\""
-         << " data-stream-state=\"offline\">\n";
-    if (stream_ready) {
-        html << "            <img class=\"alarm-cctv__video\" alt=\""
-             << html_escape(cctv_label) << "\" data-role=\"cctv-stream\""
-             << " loading=\"lazy\" decoding=\"async\" referrerpolicy=\"no-referrer\"";
-        if (has_mjpeg_stream) {
-            html << " data-mjpeg-src=\"" << html_escape(cctv_config.mjpeg_stream_url) << "\"";
-        }
-        if (has_rtsp_preview) {
-            html << " data-rtsp-src=\"" << html_escape(rtsp_preview) << "\"";
-        }
-        html << " data-reconnect-delay=\"5000\" />\n";
-    } else {
-        html << "            <div class=\"alarm-cctv__placeholder\">\n";
-        html << "              <span class=\"alarm-cctv__label\">" << html_escape(coming_soon_label)
-             << "</span>\n";
-        html << "              <span class=\"alarm-cctv__hint\">" << html_escape(cctv_hint)
-             << "</span>\n";
-        html << "              <span class=\"alarm-cctv__hint\">" << html_escape(configure_cctv_label)
-             << "</span>\n";
-        if (has_rtsp_preview) {
-            html << "              <span class=\"alarm-cctv__hint alarm-cctv__hint--uri\">"
-                 << html_escape(rtsp_preview) << "</span>\n";
-        }
-        html << "            </div>\n";
-    }
-    html << "          </div>\n";
-    html << "          <div class=\"alarm-ptz-controls\" data-ptz-endpoint=\"/api/ptz\">\n";
-    html << "            <h3 class=\"alarm-ptz-controls__title\">" << html_escape(ptz_controls_label)
-         << "</h3>\n";
-    html << "            <div class=\"alarm-ptz-controls__buttons\">\n";
-    html << "              <button type=\"button\" class=\"alarm-ptz-button\" data-ptz-action=\"up\"";
-    if (!ptz_ready) {
-        html << " disabled";
-    }
-    html << ">" << html_escape(tilt_up_label) << "</button>\n";
-    html << "              <button type=\"button\" class=\"alarm-ptz-button\" data-ptz-action=\"left\"";
-    if (!ptz_ready) {
-        html << " disabled";
-    }
-    html << ">" << html_escape(pan_left_label) << "</button>\n";
-    html << "              <button type=\"button\" class=\"alarm-ptz-button\" data-ptz-action=\"right\"";
-    if (!ptz_ready) {
-        html << " disabled";
-    }
-    html << ">" << html_escape(pan_right_label) << "</button>\n";
-    html << "              <button type=\"button\" class=\"alarm-ptz-button\" data-ptz-action=\"down\"";
-    if (!ptz_ready) {
-        html << " disabled";
-    }
-    html << ">" << html_escape(tilt_down_label) << "</button>\n";
-    html << "              <button type=\"button\" class=\"alarm-ptz-button\" data-ptz-action=\"zoom_in\"";
-    if (!ptz_ready) {
-        html << " disabled";
-    }
-    html << ">" << html_escape(zoom_in_label) << "</button>\n";
-    html << "              <button type=\"button\" class=\"alarm-ptz-button\" data-ptz-action=\"zoom_out\"";
-    if (!ptz_ready) {
-        html << " disabled";
-    }
-    html << ">" << html_escape(zoom_out_label) << "</button>\n";
-    html << "              <button type=\"button\" class=\"alarm-ptz-button alarm-ptz-button--stop\""
-         << " data-ptz-action=\"stop\"";
-    if (!ptz_ready) {
-        html << " disabled";
-    }
-    html << ">" << html_escape(stop_motion_label) << "</button>\n";
-    html << "            </div>\n";
-    html << "          </div>\n";
-    html << "        </section>\n";
     html << "      </main>\n";
     html << "    </div>\n";
     html << "  </div>\n";
@@ -1163,87 +1056,6 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     html << "          setMode('alert');\n";
     html << "        }\n";
     html << "      });\n";
-    html << "      const ptzRoot = page.querySelector('.alarm-ptz-controls');\n";
-    html << "      if (ptzRoot) {\n";
-    html << "        const ptzEndpoint = ptzRoot.getAttribute('data-ptz-endpoint') || '/api/ptz';\n";
-    html << "        const ptzButtons = Array.from(ptzRoot.querySelectorAll('[data-ptz-action]'));\n";
-    html << "        ptzButtons.forEach((button) => {\n";
-    html << "          button.addEventListener('click', () => {\n";
-    html << "            if (button.disabled) {\n";
-    html << "              return;\n";
-    html << "            }\n";
-    html << "            const action = button.getAttribute('data-ptz-action');\n";
-    html << "            if (!action) {\n";
-    html << "              return;\n";
-    html << "            }\n";
-    html << "            button.classList.add('is-busy');\n";
-    html << "            fetch(ptzEndpoint + '?action=' + encodeURIComponent(action), { method: 'POST' })\n";
-    html << "              .catch((error) => console.warn('PTZ request failed', error))\n";
-    html << "              .finally(() => button.classList.remove('is-busy'));\n";
-    html << "          }, { passive: true });\n";
-    html << "        });\n";
-    html << "      }\n";
-    html << "      const streamViewport = page.querySelector('.alarm-cctv__viewport');\n";
-    html << "      const streamStatus = page.querySelector('[data-role=\\\"stream-status\\\"]');\n";
-    html << "      const updateStreamStatus = (state) => {\n";
-    html << "        if (!streamStatus) {\n";
-    html << "          return;\n";
-    html << "        }\n";
-    html << "        const prefix = streamStatus.getAttribute('data-label-prefix') || '';\n";
-    html << "        const label = streamStatus.getAttribute('data-label-' + state) || streamStatus.textContent;\n";
-    html << "        streamStatus.textContent = prefix ? `${prefix}: ${label}` : label;\n";
-    html << "        streamStatus.setAttribute('data-state', state);\n";
-    html << "      };\n";
-    html << "      if (streamViewport) {\n";
-    html << "        const streamElement = streamViewport.querySelector('[data-role=\\\"cctv-stream\\\"]');\n";
-    html << "        const markOnline = () => {\n";
-    html << "          streamViewport.setAttribute('data-stream-state', 'online');\n";
-    html << "          updateStreamStatus('online');\n";
-    html << "        };\n";
-    html << "        const markOffline = () => {\n";
-    html << "          streamViewport.setAttribute('data-stream-state', 'offline');\n";
-    html << "          updateStreamStatus('offline');\n";
-    html << "        };\n";
-    html << "        if (!streamElement) {\n";
-    html << "          markOffline();\n";
-    html << "          return;\n";
-    html << "        }\n";
-    html << "        const mjpegSource = streamElement.getAttribute('data-mjpeg-src');\n";
-    html << "        if (!mjpegSource) {\n";
-    html << "          markOffline();\n";
-    html << "          return;\n";
-    html << "        }\n";
-    html << "        let reconnectTimer = 0;\n";
-    html << "        const reconnectDelay = Number.parseInt(streamElement.getAttribute('data-reconnect-delay') || '5000', 10);\n";
-    html << "        const connect = () => {\n";
-    html << "          window.clearTimeout(reconnectTimer);\n";
-    html << "          const separator = mjpegSource.includes('?') ? '&' : '?';\n";
-    html << "          const cacheBuster = `_=${Date.now()}`;\n";
-    html << "          streamElement.src = `${mjpegSource}${separator}${cacheBuster}`;\n";
-    html << "        };\n";
-    html << "        const scheduleReconnect = () => {\n";
-    html << "          window.clearTimeout(reconnectTimer);\n";
-    html << "          reconnectTimer = window.setTimeout(connect, reconnectDelay);\n";
-    html << "        };\n";
-    html << "        markOffline();\n";
-    html << "        streamElement.addEventListener('load', () => {\n";
-    html << "          window.clearTimeout(reconnectTimer);\n";
-    html << "          markOnline();\n";
-    html << "        });\n";
-    html << "        streamElement.addEventListener('error', () => {\n";
-    html << "          markOffline();\n";
-    html << "          streamElement.removeAttribute('src');\n";
-    html << "          scheduleReconnect();\n";
-    html << "        });\n";
-    html << "        connect();\n";
-    html << "        document.addEventListener('visibilitychange', () => {\n";
-    html << "          if (document.visibilityState === 'visible' && streamViewport.getAttribute('data-stream-state') !== 'online') {\n";
-    html << "            connect();\n";
-    html << "          }\n";
-    html << "        });\n";
-    html << "      }\n";
-    html << "      renderDisplay();\n";
-    html << "      setMode('idle');\n";
     html << "    })();\n";
     html << "  </script>\n";
     html << "</body>\n";
