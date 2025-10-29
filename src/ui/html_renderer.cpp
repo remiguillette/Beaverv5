@@ -677,12 +677,12 @@ std::string generate_beavertask_board_html(const TranslationCatalog& translation
     html << "            <div class=\"task-create-menu\" role=\"menu\" aria-label=\"" << create_item_label
          << "\">\n";
     html << "              <p class=\"task-create-menu__title\">" << create_item_label << "</p>\n";
-    html << "              <a class=\"task-create-menu__item\" role=\"menuitem\" data-create=\"task\""
-         << " href=\"#\">" << new_task_label << "</a>\n";
-    html << "              <a class=\"task-create-menu__item\" role=\"menuitem\" data-create=\"shopping-list\""
-         << " href=\"#\">" << new_shopping_list_label << "</a>\n";
-    html << "              <a class=\"task-create-menu__item\" role=\"menuitem\" data-create=\"appointment\""
-         << " href=\"#\">" << new_appointment_label << "</a>\n";
+    html << "              <button type=\"button\" class=\"task-create-menu__item\" role=\"menuitem\""
+         << " data-create=\"task\"">" << new_task_label << "</button>\n";
+    html << "              <button type=\"button\" class=\"task-create-menu__item\" role=\"menuitem\""
+         << " data-create=\"shopping-list\"">" << new_shopping_list_label << "</button>\n";
+    html << "              <button type=\"button\" class=\"task-create-menu__item\" role=\"menuitem\""
+         << " data-create=\"appointment\"">" << new_appointment_label << "</button>\n";
     html << "            </div>\n";
     html << "          </details>\n";
     html << "          <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" << language_label

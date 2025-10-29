@@ -1349,13 +1349,20 @@ body {
 
 .task-create-menu__item {
   display: block;
+  width: 100%;
   padding: 0.55rem 0.75rem;
   border-radius: 10px;
+  border: none;
+  text-align: left;
   text-decoration: none;
   color: var(--text-main);
+  font: inherit;
   font-weight: 500;
   background: var(--surface-highlight);
+  cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .task-create-menu__item:hover {
