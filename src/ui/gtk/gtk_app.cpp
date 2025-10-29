@@ -217,6 +217,11 @@ void set_widget_visible(GtkWidget* widget, bool visible) {
     if (widget == nullptr) {
         return;
     }
+
+    if (!GTK_IS_WIDGET(widget)) {
+        g_warning("GtkApp attempted to update visibility of a non-widget pointer. Ignoring.");
+        return;
+    }
 #if GTK_MAJOR_VERSION >= 4
     gtk_widget_set_visible(widget, visible);
 #else
@@ -873,7 +878,19 @@ void GtkApp::ensure_gstreamer_initialized() {
 }
 
 void GtkApp::ensure_camera_overlay() {
-    if (overlay_root_ == nullptr || camera_overlay_ != nullptr) {
+    if (overlay_root_ == nullptr) {
+        return;
+    }
+
+    if (camera_overlay_ != nullptr && !GTK_IS_WIDGET(camera_overlay_)) {
+        g_warning("GtkApp detected invalid CCTV overlay widget. Resetting overlay state.");
+        camera_overlay_ = nullptr;
+        camera_frame_ = nullptr;
+        camera_status_label_ = nullptr;
+        camera_video_widget_ = nullptr;
+    }
+
+    if (camera_overlay_ != nullptr) {
         return;
     }
 
@@ -918,6 +935,12 @@ void GtkApp::ensure_camera_overlay() {
 
 void GtkApp::set_camera_status(const std::string& message) {
     if (camera_status_label_ == nullptr) {
+        return;
+    }
+
+    if (!GTK_IS_LABEL(camera_status_label_)) {
+        g_warning("GtkApp camera status label pointer is invalid. Disabling status updates.");
+        camera_status_label_ = nullptr;
         return;
     }
     if (message.empty()) {
