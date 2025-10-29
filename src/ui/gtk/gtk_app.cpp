@@ -902,7 +902,11 @@ void GtkApp::ensure_camera_overlay() {
 
     camera_status_label_ = gtk_label_new("Connecting to CCTV feed…");
     gtk_label_set_xalign(GTK_LABEL(camera_status_label_), 0.0f);
+#if GTK_CHECK_VERSION(4, 10, 0)
     gtk_label_set_wrap(GTK_LABEL(camera_status_label_), TRUE);
+#else
+    gtk_label_set_line_wrap(GTK_LABEL(camera_status_label_), TRUE);
+#endif
 #if GTK_MAJOR_VERSION >= 4
     gtk_box_append(GTK_BOX(container), camera_status_label_);
 #else
