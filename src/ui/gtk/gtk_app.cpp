@@ -910,9 +910,11 @@ void GtkApp::ensure_camera_overlay() {
     gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
 #if GTK_MAJOR_VERSION >= 4
     gtk_overlay_add_overlay(GTK_OVERLAY(overlay_root_), frame);
+    gtk_overlay_set_child_pass_through(GTK_OVERLAY(overlay_root_), frame, TRUE);
     gtk_frame_set_child(GTK_FRAME(frame), container);
 #else
     gtk_overlay_add_overlay(GTK_OVERLAY(overlay_root_), frame);
+    gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(overlay_root_), frame, TRUE);
     gtk_container_add(GTK_CONTAINER(frame), container);
 #endif
 
