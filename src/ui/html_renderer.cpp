@@ -2161,7 +2161,6 @@ std::string generate_beavertask_planner_html(const TranslationCatalog& translati
     append("            completed: Boolean(item.completed)");
     append("          };");
     append("        });");
-    append("        });");
     append("      };");
     append("      const loadTasks = () => {");
     append("        try {");
