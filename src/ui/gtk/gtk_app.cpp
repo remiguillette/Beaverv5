@@ -748,18 +748,23 @@ void GtkApp::prompt_media_permission(WebKitPermissionRequest* request) {
         },
         data);
 #else
-    GtkWidget* dialog = gtk_dialog_new_with_buttons(kMediaPermissionTitle, parent,
-                                                   GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                                   "Deny", GTK_RESPONSE_CANCEL,
-                                                   "Allow", GTK_RESPONSE_ACCEPT, nullptr);
+    GtkWidget* dialog = gtk_dialog_new();
+    gtk_window_set_title(GTK_WINDOW(dialog), kMediaPermissionTitle);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), "Deny", GTK_RESPONSE_CANCEL);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), "Allow", GTK_RESPONSE_ACCEPT);
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+
+    if (parent != nullptr) {
+        gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
+        gtk_window_set_destroy_with_parent(GTK_WINDOW(dialog), TRUE);
+    }
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
     GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
     GtkWidget* label = gtk_label_new(kMediaPermissionDetail);
     gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
     gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
     gtk_container_add(GTK_CONTAINER(content_area), label);
     gtk_widget_show(label);
-    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
-
     gint response = gtk_dialog_run(GTK_DIALOG(dialog));
     if (response == GTK_RESPONSE_ACCEPT) {
         g_message("GtkApp allowing webcam permission request.");
