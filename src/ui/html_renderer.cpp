@@ -843,6 +843,13 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     const std::string panic_label = translations.translate("Panic", language);
     const std::string clear_label = translations.translate("Clear", language);
     const std::string status_title = translations.translate("Status indicators", language);
+    const std::string camera_title = translations.translate("Live webcam", language);
+    const std::string camera_subtitle = translations.translate("Activate webcam", language);
+    const std::string camera_ready_label = translations.translate("Allow camera access to start live feed.", language);
+    const std::string camera_active_label = translations.translate("Camera active", language);
+    const std::string camera_error_label = translations.translate("Unable to access webcam", language);
+    const std::string camera_start_label = translations.translate("Start feed", language);
+    const std::string camera_stop_label = translations.translate("Stop feed", language);
     const std::string ready_label = translations.translate("System ready", language);
     const std::string armed_label = translations.translate("Alarm armed", language);
     const std::string disarmed_label = translations.translate("System disarmed", language);
@@ -926,6 +933,34 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
          << " data-action=\"panic\">" << html_escape(panic_label) << "</button>\n";
     html << "          </div>\n";
     html << "        </section>\n";
+    html << "        <section class=\"alarm-card alarm-card--camera\" aria-labelledby=\"alarm-camera-title\">\n";
+    html << "          <div class=\"alarm-card__header\">\n";
+    html << "            <h2 id=\"alarm-camera-title\" class=\"alarm-card__title\">"
+         << html_escape(camera_title) << "</h2>\n";
+    html << "            <p class=\"alarm-card__subtitle\" data-role=\"camera-status\""
+         << " data-label-idle=\"" << html_escape(camera_subtitle) << "\""
+         << " data-label-active=\"" << html_escape(camera_active_label) << "\""
+         << " data-label-error=\"" << html_escape(camera_error_label) << "\">"
+         << html_escape(camera_subtitle) << "</p>\n";
+    html << "          </div>\n";
+    html << "          <div class=\"alarm-camera\">\n";
+    html << "            <div class=\"alarm-camera__display\">\n";
+    html << "              <video class=\"alarm-camera__video\" playsinline autoplay muted></video>\n";
+    html << "              <div class=\"alarm-camera__overlay\" data-role=\"camera-overlay\""
+         << " data-label-idle=\"" << html_escape(camera_ready_label) << "\""
+         << " data-label-active=\"" << html_escape(camera_active_label) << "\""
+         << " data-label-error=\"" << html_escape(camera_error_label) << "\">"
+         << html_escape(camera_ready_label) << "</div>\n";
+    html << "            </div>\n";
+    html << "            <div class=\"alarm-camera__actions\">\n";
+    html << "              <button type=\"button\" class=\"alarm-action alarm-action--camera-start\""
+         << " data-action=\"camera-start\">" << html_escape(camera_start_label) << "</button>\n";
+    html << "              <button type=\"button\" class=\"alarm-action alarm-action--camera-stop\""
+         << " data-action=\"camera-stop\" disabled>" << html_escape(camera_stop_label)
+         << "</button>\n";
+    html << "            </div>\n";
+    html << "          </div>\n";
+    html << "        </section>\n";
     html << "        <section class=\"alarm-card alarm-card--status\" aria-labelledby=\"alarm-status-title\">\n";
     html << "          <div class=\"alarm-card__header\">\n";
     html << "            <h2 id=\"alarm-status-title\" class=\"alarm-card__title\">"
@@ -977,6 +1012,7 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     html << "      const placeholder = display ? display.getAttribute('data-placeholder') || '' : '';\n";
     html << "      const maxLength = 6;\n";
     html << "      let digits = [];\n";
+    html << "      let cameraStream = null;\n";
     html << "      const updateSubtitles = (stateKey) => {\n";
     html << "        subtitleElements.forEach((element) => {\n";
     html << "          const nextLabel = element.getAttribute('data-label-' + stateKey) || '';\n";
@@ -1024,7 +1060,77 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     html << "          updateSubtitles('ready');\n";
     html << "        }\n";
     html << "      };\n";
-    html << "      if (keypad) {\n";
+    html << "      const cameraCard = page.querySelector('.alarm-card--camera');\n";
+    html << "      const cameraStatus = cameraCard ? cameraCard.querySelector('[data-role=\\"camera-status\\"]') : null;\n";
+    html << "      const cameraOverlay = cameraCard ? cameraCard.querySelector('[data-role=\\"camera-overlay\\"]') : null;\n";
+    html << "      const cameraStart = cameraCard ? cameraCard.querySelector('[data-action=\\"camera-start\\"]') : null;\n";
+    html << "      const cameraStop = cameraCard ? cameraCard.querySelector('[data-action=\\"camera-stop\\"]') : null;\n";
+    html << "      const cameraVideo = cameraCard ? cameraCard.querySelector('video') : null;\n";
+    html << "      const setCameraState = (state) => {\n";
+    html << "        if (!cameraCard) {\n";
+    html << "          return;\n";
+    html << "        }\n";
+    html << "        cameraCard.setAttribute('data-camera-state', state);\n";
+    html << "        const applyLabel = (element) => {\n";
+    html << "          if (!element) {\n";
+    html << "            return;\n";
+    html << "          }\n";
+    html << "          const nextLabel = element.getAttribute('data-label-' + state);\n";
+    html << "          if (nextLabel) {\n";
+    html << "            element.textContent = nextLabel;\n";
+    html << "          }\n";
+    html << "        };\n";
+    html << "        applyLabel(cameraStatus);\n";
+    html << "        applyLabel(cameraOverlay);\n";
+    html << "        if (cameraStart) {\n";
+    html << "          cameraStart.disabled = state === 'active';\n";
+    html << "        }\n";
+    html << "        if (cameraStop) {\n";
+    html << "          cameraStop.disabled = state !== 'active';\n";
+    html << "        }\n";
+    html << "      };\n";
+    html << "      const stopCamera = () => {\n";
+    html << "        if (!cameraStream) {\n";
+    html << "          return;\n";
+    html << "        }\n";
+    html << "        cameraStream.getTracks().forEach((track) => track.stop());\n";
+    html << "        cameraStream = null;\n";
+    html << "        if (cameraVideo) {\n";
+    html << "          cameraVideo.srcObject = null;\n";
+    html << "        }\n";
+    html << "        setCameraState('idle');\n";
+    html << "      };\n";
+    html << "      const startCamera = async () => {\n";
+    html << "        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {\n";
+    html << "          setCameraState('error');\n";
+    html << "          return;\n";
+    html << "        }\n";
+    html << "        try {\n";
+    html << "          cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });\n";
+    html << "          if (cameraVideo) {\n";
+    html << "            cameraVideo.srcObject = cameraStream;\n";
+    html << "          }\n";
+    html << "          setCameraState('active');\n";
+    html << "        } catch (error) {\n";
+    html << "          stopCamera();\n";
+    html << "          setCameraState('error');\n";
+    html << "        }\n";
+    html << "      };\n";
+    html << "      if (cameraStart) {\n";
+    html << "        cameraStart.addEventListener('click', () => {\n";
+    html << "          startCamera();\n";
+    html << "        });\n";
+    html << "      }\n";
+    html << "      if (cameraStop) {\n";
+    html << "        cameraStop.addEventListener('click', () => {\n";
+    html << "          stopCamera();\n";
+    html << "        });\n";
+    html << "      }\n";
+    html << "      setCameraState('idle');\n";
+    html << "      window.addEventListener('beforeunload', () => {\n";
+    html << "        stopCamera();\n";
+    html << "      });\n";
+    html << "      if (keypad) {\n"
     html << "        keypad.addEventListener('click', (event) => {\n";
     html << "          const button = event.target.closest('button');\n";
     html << "          if (!button || !keypad.contains(button)) {\n";
