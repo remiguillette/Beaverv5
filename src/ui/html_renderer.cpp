@@ -1061,10 +1061,10 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     html << "        }\n";
     html << "      };\n";
     html << "      const cameraCard = page.querySelector('.alarm-card--camera');\n";
-    html << "      const cameraStatus = cameraCard ? cameraCard.querySelector('[data-role=\\"camera-status\\"]') : null;\n";
-    html << "      const cameraOverlay = cameraCard ? cameraCard.querySelector('[data-role=\\"camera-overlay\\"]') : null;\n";
-    html << "      const cameraStart = cameraCard ? cameraCard.querySelector('[data-action=\\"camera-start\\"]') : null;\n";
-    html << "      const cameraStop = cameraCard ? cameraCard.querySelector('[data-action=\\"camera-stop\\"]') : null;\n";
+    html << "      const cameraStatus = cameraCard ? cameraCard.querySelector('[data-role=\"camera-status\"]') : null;\n";
+    html << "      const cameraOverlay = cameraCard ? cameraCard.querySelector('[data-role=\"camera-overlay\"]') : null;\n";
+    html << "      const cameraStart = cameraCard ? cameraCard.querySelector('[data-action=\"camera-start\"]') : null;\n";
+    html << "      const cameraStop = cameraCard ? cameraCard.querySelector('[data-action=\"camera-stop\"]') : null;\n";
     html << "      const cameraVideo = cameraCard ? cameraCard.querySelector('video') : null;\n";
     html << "      const setCameraState = (state) => {\n";
     html << "        if (!cameraCard) {\n";
@@ -1130,7 +1130,7 @@ std::string generate_beaveralarm_console_html(const TranslationCatalog& translat
     html << "      window.addEventListener('beforeunload', () => {\n";
     html << "        stopCamera();\n";
     html << "      });\n";
-    html << "      if (keypad) {\n"
+    html << "      if (keypad) {\n";
     html << "        keypad.addEventListener('click', (event) => {\n";
     html << "          const button = event.target.closest('button');\n";
     html << "          if (!button || !keypad.contains(button)) {\n";
