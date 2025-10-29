@@ -678,11 +678,11 @@ std::string generate_beavertask_board_html(const TranslationCatalog& translation
          << "\">\n";
     html << "              <p class=\"task-create-menu__title\">" << create_item_label << "</p>\n";
     html << "              <button type=\"button\" class=\"task-create-menu__item\" role=\"menuitem\""
-         << " data-create=\"task\"">" << new_task_label << "</button>\n";
+         << " data-create=\"task\">" << new_task_label << "</button>\n";
     html << "              <button type=\"button\" class=\"task-create-menu__item\" role=\"menuitem\""
-         << " data-create=\"shopping-list\"">" << new_shopping_list_label << "</button>\n";
+         << " data-create=\"shopping-list\">" << new_shopping_list_label << "</button>\n";
     html << "              <button type=\"button\" class=\"task-create-menu__item\" role=\"menuitem\""
-         << " data-create=\"appointment\"">" << new_appointment_label << "</button>\n";
+         << " data-create=\"appointment\">" << new_appointment_label << "</button>\n";
     html << "            </div>\n";
     html << "          </details>\n";
     html << "          <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" << language_label
