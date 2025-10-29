@@ -902,7 +902,6 @@ void GtkApp::ensure_camera_overlay() {
     gtk_widget_set_valign(container, GTK_ALIGN_CENTER);
     gtk_widget_set_margin_start(container, kCameraOverlayMargin);
     gtk_widget_set_margin_end(container, kCameraOverlayMargin);
-    gtk_label_set_wrap_mode(GTK_LABEL(camera_status_label_), PANGO_WRAP_WORD_CHAR);
     gtk_widget_set_margin_bottom(container, kCameraOverlayMargin);
     gtk_widget_set_size_request(container, kCameraMinimumWidth, kCameraMinimumHeight);
 
@@ -919,6 +918,11 @@ void GtkApp::ensure_camera_overlay() {
 
     camera_status_label_ = gtk_label_new("Connecting to CCTV feed…");
     gtk_label_set_xalign(GTK_LABEL(camera_status_label_), 0.0f);
+#if GTK_CHECK_VERSION(4, 6, 0)
+    gtk_label_set_wrap_mode(GTK_LABEL(camera_status_label_), PANGO_WRAP_WORD_CHAR);
+#else
+    gtk_label_set_line_wrap_mode(GTK_LABEL(camera_status_label_), PANGO_WRAP_WORD_CHAR);
+#endif
 #if GTK_CHECK_VERSION(4, 10, 0)
     gtk_label_set_wrap(GTK_LABEL(camera_status_label_), TRUE);
 #else
