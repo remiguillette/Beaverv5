@@ -28,28 +28,9 @@ CXXFLAGS += $(shell pkg-config --cflags $(SDBUS_PKG))
 LDFLAGS += $(shell pkg-config --libs $(SDBUS_PKG))
 endif
 
-CURL_PKG := $(shell pkg-config --exists libcurl && echo libcurl)
-ifeq ($(CURL_PKG),)
-$(warning libcurl development package not found. PTZ HTTP calls will be disabled.)
-else
-CXXFLAGS += $(shell pkg-config --cflags $(CURL_PKG))
-LDFLAGS += $(shell pkg-config --libs $(CURL_PKG))
-endif
-
-GSTREAMER_PACKAGES := gstreamer-1.0 gstreamer-video-1.0
-GSTREAMER_PKG := $(shell pkg-config --exists $(GSTREAMER_PACKAGES) && echo yes)
-ifeq ($(GSTREAMER_PKG),yes)
-CXXFLAGS += $(shell pkg-config --cflags $(GSTREAMER_PACKAGES)) -DHAVE_GSTREAMER
-LDFLAGS += $(shell pkg-config --libs $(GSTREAMER_PACKAGES))
-else
-$(warning GStreamer development packages not found. GTK CCTV playback disabled.)
-endif
-
 TARGET := beaver_kiosk
 SRC_DIR := src
 OBJ_DIR := build
-
-LDFLAGS +=
 
 SOURCES := $(shell find $(SRC_DIR) -name '*.cpp')
 OBJECTS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SOURCES))

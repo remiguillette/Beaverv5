@@ -36,7 +36,6 @@ Thumbs.db
 .env.*
 !*.env.example
 !*.env.sample
-cctv.env
 
 # Localization build artifacts
 *.mo
