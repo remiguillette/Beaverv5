@@ -50,6 +50,11 @@ enum class BeaverAlarmMenuLinkMode {
     kRelativeIndex
 };
 
+enum class BeaverTaskMenuLinkMode {
+    kAbsoluteRoot,
+    kRelativeIndex
+};
+
 struct NavigationRecord {
     std::string app_name;
     MenuRouteMode route_mode;
@@ -103,6 +108,14 @@ public:
     std::string beaversystem_page_html(Language language, const std::string& asset_prefix,
                                        BeaverSystemMenuLinkMode menu_link_mode =
                                            BeaverSystemMenuLinkMode::kAbsoluteRoot) const;
+    std::string beavertask_page_html() const;
+    std::string beavertask_page_html(Language language,
+                                     BeaverTaskMenuLinkMode menu_link_mode =
+                                         BeaverTaskMenuLinkMode::kAbsoluteRoot) const;
+    std::string beavertask_page_html(Language language, const std::string& asset_prefix) const;
+    std::string beavertask_page_html(Language language, const std::string& asset_prefix,
+                                     BeaverTaskMenuLinkMode menu_link_mode =
+                                         BeaverTaskMenuLinkMode::kAbsoluteRoot) const;
 
 private:
     std::vector<AppTile> apps_;

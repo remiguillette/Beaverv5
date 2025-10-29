@@ -222,6 +222,12 @@ void HttpServerApp::handle_request(int client_socket) {
         response.headers["Content-Type"] = "text/html; charset=utf-8";
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
         response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
+    } else if (path == "/apps/beavertask") {
+        response.body = manager_.beavertask_page_html(
+            language, kHttpAssetPrefix, BeaverTaskMenuLinkMode::kAbsoluteRoot);
+        response.headers["Content-Type"] = "text/html; charset=utf-8";
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+        response.headers["Content-Language"] = language == Language::French ? "fr" : "en";
     } else if (path == "/apps/beaversystem") {
         response.body = manager_.beaversystem_page_html(
             language, kHttpAssetPrefix, BeaverSystemMenuLinkMode::kAbsoluteRoot);
