@@ -163,6 +163,18 @@ constexpr const char kRemoveRemoteBackButtonScript[] = R"JS((() => {
   }
 })();)JS";
 
+constexpr const char kMediaPermissionTitle[] =
+    "Allow BeaverAlarm to access the camera?";
+constexpr const char kMediaPermissionDetail[] =
+    "Granting access lets BeaverAlarm use the kiosk webcam for monitoring.";
+
+#if GTK_MAJOR_VERSION >= 4
+struct MediaPermissionPromptData {
+    WebKitPermissionRequest* request = nullptr;
+    GtkAlertDialog* dialog = nullptr;
+};
+#endif
+
 std::string build_base_uri() {
     namespace fs = std::filesystem;
     fs::path public_dir = fs::current_path() / "public";
@@ -436,10 +448,10 @@ void GtkApp::build_ui(GtkApplication* application) {
         webkit_settings_set_enable_smooth_scrolling(settings, FALSE);
         webkit_settings_set_enable_webaudio(settings, FALSE);
 #if WEBKIT_CHECK_VERSION(2, 22, 0)
-        webkit_settings_set_enable_media_stream(settings, FALSE);
+        webkit_settings_set_enable_media_stream(settings, TRUE);
 #endif
 #if WEBKIT_CHECK_VERSION(2, 28, 0)
-        webkit_settings_set_enable_webrtc(settings, FALSE);
+        webkit_settings_set_enable_webrtc(settings, TRUE);
 #endif
         webkit_web_view_set_settings(WEBKIT_WEB_VIEW(view), settings);
         g_object_unref(settings);
@@ -463,6 +475,7 @@ void GtkApp::build_ui(GtkApplication* application) {
                          G_CALLBACK(GtkApp::on_script_message_received), this);
     }
 
+    g_signal_connect(webview, "permission-request", G_CALLBACK(GtkApp::on_permission_request), this);
     g_signal_connect(webview, "decide-policy", G_CALLBACK(GtkApp::on_decide_policy), this);
     g_signal_connect(webview, "load-changed", G_CALLBACK(GtkApp::on_load_changed), this);
 #if defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
@@ -610,6 +623,23 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
     return TRUE;
 }
 
+gboolean GtkApp::on_permission_request(WebKitWebView* /*web_view*/,
+                                       WebKitPermissionRequest* request, gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr || request == nullptr) {
+        return FALSE;
+    }
+
+    if (!WEBKIT_IS_MEDIA_PERMISSION_REQUEST(request)) {
+        g_message("GtkApp ignoring non-media permission request.");
+        return FALSE;
+    }
+
+    g_message("GtkApp received media permission request. Prompting user.");
+    self->prompt_media_permission(request);
+    return TRUE;
+}
+
 gboolean GtkApp::on_console_message(WebKitWebView* /*web_view*/,
 #if defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
                                     WebKitConsoleMessage* message,
@@ -661,6 +691,83 @@ gboolean GtkApp::on_console_message(WebKitWebView* /*web_view*/,
     g_free(formatted);
     return FALSE;
 #endif
+}
+
+void GtkApp::prompt_media_permission(WebKitPermissionRequest* request) {
+    if (request == nullptr) {
+        return;
+    }
+
+    g_message("GtkApp prompting user for webcam permission.");
+    GtkWindow* parent = resolve_parent_window();
+
+#if GTK_MAJOR_VERSION >= 4
+    GtkAlertDialog* dialog = gtk_alert_dialog_new(kMediaPermissionTitle);
+    gtk_alert_dialog_set_detail(dialog, kMediaPermissionDetail);
+    const char* buttons[] = {"Deny", "Allow", nullptr};
+    gtk_alert_dialog_set_buttons(dialog, buttons);
+    gtk_alert_dialog_set_default_button(dialog, 1);
+
+    auto* data = g_new(MediaPermissionPromptData, 1);
+    data->request = WEBKIT_PERMISSION_REQUEST(g_object_ref(request));
+    data->dialog = dialog;
+
+    gtk_alert_dialog_choose(
+        dialog, parent, nullptr,
+        [](GtkAlertDialog* /*alert_dialog*/, int response, gpointer user_data) {
+            auto* data = static_cast<MediaPermissionPromptData*>(user_data);
+            if (response == 1) {
+                g_message("GtkApp allowing webcam permission request.");
+                webkit_permission_request_allow(data->request);
+            } else {
+                g_message("GtkApp denying webcam permission request.");
+                webkit_permission_request_deny(data->request);
+            }
+            g_object_unref(data->request);
+            g_object_unref(data->dialog);
+            g_free(data);
+        },
+        data);
+#else
+    GtkWidget* dialog = gtk_message_dialog_new(parent,
+                                               GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                               GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "%s",
+                                               kMediaPermissionTitle);
+    gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s",
+                                             kMediaPermissionDetail);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), "Deny", GTK_RESPONSE_CANCEL);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), "Allow", GTK_RESPONSE_ACCEPT);
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+
+    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+    if (response == GTK_RESPONSE_ACCEPT) {
+        g_message("GtkApp allowing webcam permission request.");
+        webkit_permission_request_allow(request);
+    } else {
+        g_message("GtkApp denying webcam permission request.");
+        webkit_permission_request_deny(request);
+    }
+    gtk_widget_destroy(dialog);
+#endif
+}
+
+GtkWindow* GtkApp::resolve_parent_window() const {
+#if GTK_MAJOR_VERSION >= 4
+    if (overlay_root_ != nullptr) {
+        GtkRoot* root = gtk_widget_get_root(overlay_root_);
+        if (root != nullptr && GTK_IS_WINDOW(root)) {
+            return GTK_WINDOW(root);
+        }
+    }
+#else
+    if (overlay_root_ != nullptr) {
+        GtkWidget* toplevel = gtk_widget_get_toplevel(overlay_root_);
+        if (toplevel != nullptr && GTK_IS_WINDOW(toplevel)) {
+            return GTK_WINDOW(toplevel);
+        }
+    }
+#endif
+    return nullptr;
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
