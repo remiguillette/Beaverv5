@@ -630,7 +630,26 @@ gboolean GtkApp::on_permission_request(WebKitWebView* /*web_view*/,
         return FALSE;
     }
 
-    if (!WEBKIT_IS_MEDIA_PERMISSION_REQUEST(request)) {
+    bool is_media_permission_request = false;
+#if defined(WEBKIT_IS_MEDIA_PERMISSION_REQUEST)
+    is_media_permission_request = WEBKIT_IS_MEDIA_PERMISSION_REQUEST(request);
+#elif defined(WEBKIT_IS_USER_MEDIA_PERMISSION_REQUEST)
+    is_media_permission_request = WEBKIT_IS_USER_MEDIA_PERMISSION_REQUEST(request);
+#else
+    GType request_type = G_OBJECT_TYPE(request);
+#if defined(WEBKIT_TYPE_MEDIA_PERMISSION_REQUEST)
+    if (g_type_is_a(request_type, WEBKIT_TYPE_MEDIA_PERMISSION_REQUEST)) {
+        is_media_permission_request = true;
+    }
+#endif
+#if defined(WEBKIT_TYPE_USER_MEDIA_PERMISSION_REQUEST)
+    if (g_type_is_a(request_type, WEBKIT_TYPE_USER_MEDIA_PERMISSION_REQUEST)) {
+        is_media_permission_request = true;
+    }
+#endif
+#endif
+
+    if (!is_media_permission_request) {
         g_message("GtkApp ignoring non-media permission request.");
         return FALSE;
     }
@@ -729,14 +748,16 @@ void GtkApp::prompt_media_permission(WebKitPermissionRequest* request) {
         },
         data);
 #else
-    GtkWidget* dialog = gtk_message_dialog_new(parent,
-                                               GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                                               GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "%s",
-                                               kMediaPermissionTitle);
-    gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s",
-                                             kMediaPermissionDetail);
-    gtk_dialog_add_button(GTK_DIALOG(dialog), "Deny", GTK_RESPONSE_CANCEL);
-    gtk_dialog_add_button(GTK_DIALOG(dialog), "Allow", GTK_RESPONSE_ACCEPT);
+    GtkWidget* dialog = gtk_dialog_new_with_buttons(kMediaPermissionTitle, parent,
+                                                   GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                   "Deny", GTK_RESPONSE_CANCEL,
+                                                   "Allow", GTK_RESPONSE_ACCEPT, nullptr);
+    GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget* label = gtk_label_new(kMediaPermissionDetail);
+    gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+    gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
+    gtk_container_add(GTK_CONTAINER(content_area), label);
+    gtk_widget_show(label);
     gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
 
     gint response = gtk_dialog_run(GTK_DIALOG(dialog));
