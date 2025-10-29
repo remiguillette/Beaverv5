@@ -69,7 +69,8 @@ AppManager::AppManager()
            {make_route_entry("apps/beaveralarm", false),
             make_route_entry("/apps/beaveralarm", false)}},
           {"BeaverTask", "red", "icons/square-check-big.svg",
-           {make_route_entry("", false), make_route_entry("", false)}},
+           {make_route_entry("apps/beavertask", false),
+            make_route_entry("/apps/beavertask", false)}},
           {"BeaverDoc", "green", "icons/file-text.svg",
            {make_route_entry("http://localhost:8000", false),
             make_route_entry("http://192.168.1.76:8000", false)}},
@@ -313,6 +314,29 @@ std::string AppManager::beaversystem_page_html(Language language,
                   language_to_string(language));
     } else {
         g_message("AppManager generated BeaverSystem HTML. language=%s bytes=%zu",
+                  language_to_string(language), html.size());
+    }
+    return html;
+}
+
+std::string AppManager::beavertask_page_html() const {
+    return beavertask_page_html(default_language_, BeaverTaskMenuLinkMode::kAbsoluteRoot);
+}
+
+std::string AppManager::beavertask_page_html(Language language,
+                                             BeaverTaskMenuLinkMode menu_link_mode) const {
+    return beavertask_page_html(language, "", menu_link_mode);
+}
+
+std::string AppManager::beavertask_page_html(Language language, const std::string& asset_prefix,
+                                             BeaverTaskMenuLinkMode menu_link_mode) const {
+    std::string html = generate_beavertask_board_html(translation_catalog_, language,
+                                                      asset_prefix, menu_link_mode);
+    if (html.empty()) {
+        g_warning("AppManager generated empty BeaverTask HTML for language: %s",
+                  language_to_string(language));
+    } else {
+        g_message("AppManager generated BeaverTask HTML. language=%s bytes=%zu",
                   language_to_string(language), html.size());
     }
     return html;

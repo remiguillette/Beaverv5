@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "core/translation_catalog.h"
+#include <glib.h>
 
 namespace {
 const char* html_lang_code(Language language) {
@@ -377,7 +378,455 @@ std::string build_menu_href(Language language, BeaverAlarmMenuLinkMode menu_link
     return build_menu_href_common(language, use_relative);
 }
 
+std::string build_menu_href(Language language, BeaverTaskMenuLinkMode menu_link_mode) {
+    const bool use_relative = (menu_link_mode == BeaverTaskMenuLinkMode::kRelativeIndex);
+    return build_menu_href_common(language, use_relative);
+}
+
 }  // namespace
+
+std::string generate_beavertask_board_html(const TranslationCatalog& translations,
+                                           Language language,
+                                           const std::string& asset_prefix,
+                                           BeaverTaskMenuLinkMode menu_link_mode) {
+    struct LocalizedText {
+        const char* en;
+        const char* fr;
+    };
+
+    struct TaskLinkDefinition {
+        LocalizedText label;
+        const char* href;
+    };
+
+    struct TaskChecklistDefinition {
+        LocalizedText label;
+        bool completed;
+    };
+
+    enum class TaskPriority {
+        kHigh,
+        kMedium,
+        kLow,
+    };
+
+    enum class TaskCategory {
+        kTask,
+        kShoppingList,
+        kAppointment,
+    };
+
+    struct TaskDefinition {
+        LocalizedText title;
+        LocalizedText notes;
+        LocalizedText due;
+        LocalizedText assignee;
+        TaskCategory category;
+        TaskPriority priority;
+        const char* status_key;
+        std::vector<LocalizedText> tags;
+        std::vector<TaskLinkDefinition> links;
+        std::vector<TaskChecklistDefinition> checklist;
+    };
+
+    const auto choose = [language](const LocalizedText& text) {
+        return std::string(language == Language::French ? text.fr : text.en);
+    };
+
+    const std::vector<TaskDefinition> tasks = {
+        {LocalizedText{"Finalize kiosk hardware rollout", "Finaliser le déploiement du matériel"},
+         LocalizedText{"Include temperature tracking for the spare crates.",
+                       "Inclure le suivi de température pour les palettes de rechange."},
+         LocalizedText{"Oct 28, 2024", "28 oct. 2024"},
+         LocalizedText{"René Boucher", "René Boucher"},
+         TaskCategory::kTask,
+         TaskPriority::kHigh,
+         "In progress",
+         {LocalizedText{"Operations", "Opérations"},
+          LocalizedText{"Deployment", "Déploiement"}},
+         {TaskLinkDefinition{LocalizedText{"Rollout checklist (Drive)", "Liste de déploiement (Drive)"},
+                             "https://intranet.example.com/rollout-checklist"},
+          TaskLinkDefinition{LocalizedText{"Local provisioning script",
+                                           "Script de provisioning local"},
+                             "file:///opt/kiosk/scripts/provision.sh"},
+          TaskLinkDefinition{LocalizedText{"GTK integration notes", "Notes d'intégration GTK"},
+                             "gtk://beaver/task/notes"}},
+         {TaskChecklistDefinition{LocalizedText{"Inventory confirmed with warehouse",
+                                                "Inventaire confirmé avec l'entrepôt"},
+                                  true},
+          TaskChecklistDefinition{LocalizedText{"Flash build 5.2 on 12 units",
+                                                "Installer la build 5.2 sur 12 unités"},
+                                  false},
+          TaskChecklistDefinition{LocalizedText{"Schedule final delivery window",
+                                                "Programmer la fenêtre de livraison finale"},
+                                  false}}},
+        {LocalizedText{"Prepare winter supply shopping list",
+                        "Préparer la liste d'achats d'hiver"},
+         LocalizedText{"Confirm budget impact with finance before ordering.",
+                       "Confirmer l'impact budgétaire avec les finances avant commande."},
+         LocalizedText{"Nov 4, 2024", "4 nov. 2024"},
+         LocalizedText{"Maya Tremblay", "Maya Tremblay"},
+         TaskCategory::kShoppingList,
+         TaskPriority::kMedium,
+         "Planning",
+         {LocalizedText{"Supplies", "Approvisionnements"},
+          LocalizedText{"Q4", "T4"}},
+         {TaskLinkDefinition{LocalizedText{"Previous season order", "Commande saison précédente"},
+                             "https://intranet.example.com/archive/2023-winter-order"},
+          TaskLinkDefinition{LocalizedText{"Warehouse shelf map", "Plan des étagères de l'entrepôt"},
+                             "file:///mnt/warehouse/maps/shelf-layout.pdf"}},
+         {TaskChecklistDefinition{LocalizedText{"Validate inventory from kiosk #12",
+                                                "Valider l'inventaire du kiosque #12"},
+                                  true},
+          TaskChecklistDefinition{LocalizedText{"Draft shopping list in BeaverTask",
+                                                "Rédiger la liste d'achats dans BeaverTask"},
+                                  false},
+          TaskChecklistDefinition{LocalizedText{"Share list with purchasing",
+                                                "Partager la liste avec les achats"},
+                                  false}}},
+        {LocalizedText{"Quarterly executive sync",
+                        "Synchronisation trimestrielle de direction"},
+         LocalizedText{"Collect dashboard screenshots before the meeting.",
+                       "Rassembler les captures du tableau de bord avant la rencontre."},
+         LocalizedText{"Nov 12, 2024 — 09:30", "12 nov. 2024 — 09 h 30"},
+         LocalizedText{"Dr. Elise Morin", "Dre Elise Morin"},
+         TaskCategory::kAppointment,
+         TaskPriority::kLow,
+         "Scheduled",
+         {LocalizedText{"Leadership", "Direction"},
+          LocalizedText{"Quarterly", "Trimestriel"}},
+         {TaskLinkDefinition{LocalizedText{"Executive briefing deck",
+                                           "Présentation de direction"},
+                             "https://meet.example.com/quarterly-briefing"},
+          TaskLinkDefinition{LocalizedText{"Boardroom display preset",
+                                           "Préréglage de l'affichage salle du conseil"},
+                             "file:///opt/av/presets/boardroom.scene"}},
+         {TaskChecklistDefinition{LocalizedText{"Confirm agenda with CEO",
+                                                "Confirmer l'ordre du jour avec la PDG"},
+                                  true},
+          TaskChecklistDefinition{LocalizedText{"Export BeaverSystem telemetry snapshot",
+                                                "Exporter l'instantané de télémétrie BeaverSystem"},
+                                  false},
+          TaskChecklistDefinition{LocalizedText{"Send meeting reminder to attendees",
+                                                "Envoyer un rappel aux participants"},
+                                  false}}},
+        {LocalizedText{"Patch kiosk kernel for CVE-2024-4481",
+                        "Corriger le noyau du kiosque pour la CVE-2024-4481"},
+         LocalizedText{"Coordinate downtime window with BeaverAlarm to avoid false triggers.",
+                       "Coordonner la fenêtre d'indisponibilité avec BeaverAlarm pour éviter les fausses alertes."},
+         LocalizedText{"Oct 31, 2024", "31 oct. 2024"},
+         LocalizedText{"Lina Desrochers", "Lina Desrochers"},
+         TaskCategory::kTask,
+         TaskPriority::kHigh,
+         "Blocked",
+         {LocalizedText{"Security", "Sécurité"},
+          LocalizedText{"Kernel", "Noyau"}},
+         {TaskLinkDefinition{LocalizedText{"Vendor advisory", "Avis du fournisseur"},
+                             "https://vendor.example.com/security/cve-2024-4481"},
+          TaskLinkDefinition{LocalizedText{"Local patch bundle", "Ensemble de correctifs local"},
+                             "file:///opt/patches/cve-2024-4481.tar.gz"}},
+         {TaskChecklistDefinition{LocalizedText{"Validate patch in staging",
+                                                "Valider le correctif en préproduction"},
+                                  true},
+          TaskChecklistDefinition{LocalizedText{"Update rollback plan",
+                                                "Mettre à jour le plan de retour arrière"},
+                                  false},
+          TaskChecklistDefinition{LocalizedText{"Coordinate reboot schedule",
+                                                "Coordonner le calendrier de redémarrage"},
+                                  false}}}
+    };
+
+    enum class TaskLinkType {
+        kWeb,
+        kLocal,
+    };
+
+    const auto classify_link = [](const std::string& href) {
+        if (href.empty()) {
+            return TaskLinkType::kLocal;
+        }
+
+        GUri* parsed_uri = g_uri_parse(href.c_str(), G_URI_FLAGS_NONE, nullptr);
+        if (parsed_uri == nullptr) {
+            if (href.rfind("http://", 0) == 0 || href.rfind("https://", 0) == 0) {
+                return TaskLinkType::kWeb;
+            }
+            return TaskLinkType::kLocal;
+        }
+
+        const gchar* scheme = g_uri_get_scheme(parsed_uri);
+        std::string scheme_string = scheme != nullptr ? scheme : "";
+        g_uri_unref(parsed_uri);
+        std::transform(scheme_string.begin(), scheme_string.end(), scheme_string.begin(),
+                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+
+        if (scheme_string == "http" || scheme_string == "https") {
+            return TaskLinkType::kWeb;
+        }
+
+        return TaskLinkType::kLocal;
+    };
+
+    const char* lang_code = html_lang_code(language);
+    const std::string beavertask_label = translations.translate("BeaverTask", language);
+    const std::string taskboard_label = translations.translate("TaskBoard", language);
+    const std::string add_label = translations.translate("Add", language);
+    const std::string create_item_label = translations.translate("Create new item", language);
+    const std::string new_task_label = translations.translate("New task", language);
+    const std::string new_shopping_list_label = translations.translate("New shopping list", language);
+    const std::string new_appointment_label = translations.translate("New appointment", language);
+    const std::string language_label = translations.translate("Language selection", language);
+    const std::string switch_to_french = translations.translate("Switch to French", language);
+    const std::string switch_to_english = translations.translate("Switch to English", language);
+    const std::string menu_href = build_menu_href(language, menu_link_mode);
+    const std::string back_to_menu = translations.translate("Back to menu", language);
+    const std::string task_type_label = translations.translate("Task type", language);
+    const std::string priority_label = translations.translate("Priority", language);
+    const std::string high_priority_label = translations.translate("High priority", language);
+    const std::string medium_priority_label = translations.translate("Medium priority", language);
+    const std::string low_priority_label = translations.translate("Low priority", language);
+    const std::string due_label = translations.translate("Due", language);
+    const std::string assignee_label = translations.translate("Assignee", language);
+    const std::string status_label = translations.translate("Status", language);
+    const std::string checklist_label = translations.translate("Checklist", language);
+    const std::string web_links_label = translations.translate("Web links", language);
+    const std::string local_links_label = translations.translate("Local links", language);
+    const std::string notes_label = translations.translate("Notes", language);
+
+    const std::string task_category_label = translations.translate("Task", language);
+    const std::string shopping_list_label = translations.translate("Shopping list", language);
+    const std::string appointment_label = translations.translate("Appointment", language);
+    const std::string in_progress_label = translations.translate("In progress", language);
+    const std::string planning_label = translations.translate("Planning", language);
+    const std::string scheduled_label = translations.translate("Scheduled", language);
+    const std::string blocked_label = translations.translate("Blocked", language);
+
+    const auto status_text_for_key = [&](const std::string& key) -> std::string {
+        if (key == "In progress") {
+            return in_progress_label;
+        }
+        if (key == "Planning") {
+            return planning_label;
+        }
+        if (key == "Scheduled") {
+            return scheduled_label;
+        }
+        if (key == "Blocked") {
+            return blocked_label;
+        }
+        return key;
+    };
+
+    const auto category_label = [&](TaskCategory category) -> std::string {
+        switch (category) {
+            case TaskCategory::kShoppingList:
+                return shopping_list_label;
+            case TaskCategory::kAppointment:
+                return appointment_label;
+            case TaskCategory::kTask:
+            default:
+                return task_category_label;
+        }
+    };
+
+    const auto priority_label_for = [&](TaskPriority priority) -> std::pair<std::string, std::string> {
+        switch (priority) {
+            case TaskPriority::kHigh:
+                return {"high", high_priority_label};
+            case TaskPriority::kMedium:
+                return {"medium", medium_priority_label};
+            case TaskPriority::kLow:
+            default:
+                return {"low", low_priority_label};
+        }
+    };
+
+    const auto beavertask_base = (menu_link_mode == BeaverTaskMenuLinkMode::kAbsoluteRoot)
+                                     ? std::string("/apps/beavertask")
+                                     : std::string("apps/beavertask");
+    const std::string beavertask_french_href = beavertask_base + "?lang=fr";
+    const std::string beavertask_english_href = beavertask_base + "?lang=en";
+
+    std::ostringstream html;
+    html << "<!DOCTYPE html>\n";
+    html << "<html lang=\"" << lang_code << "\">\n";
+    html << "<head>\n";
+    html << "  <meta charset=\"UTF-8\" />\n";
+    html << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n";
+    html << "  <title>" << taskboard_label << " - BeaverKiosk</title>\n";
+    html << "  <link rel=\"stylesheet\" href=\"" << resolve_asset_path(asset_prefix, "css/styles.css")
+         << "\" />\n";
+    html << "</head>\n";
+    html << "<body>\n";
+    html << "  <div id=\"root\">\n";
+    html << "    <div class=\"task-page\">\n";
+    html << "      <header class=\"task-header\">\n";
+    html << "        <div class=\"task-header__titles\">\n";
+    html << "          <a class=\"task-header__back\" href=\"" << menu_href
+         << "\">" << back_to_menu << "</a>\n";
+    html << "          <p class=\"task-header__eyebrow\">" << beavertask_label << "</p>\n";
+    html << "          <h1 class=\"task-header__title\">" << taskboard_label << "</h1>\n";
+    html << "        </div>\n";
+    html << "        <div class=\"task-header__controls\">\n";
+    html << "          <details class=\"task-create\">\n";
+    html << "            <summary class=\"task-add-button\" role=\"button\" aria-haspopup=\"menu\""
+         << " aria-expanded=\"false\">\n";
+    html << "              <span class=\"task-add-button__icon\" aria-hidden=\"true\">+</span>\n";
+    html << "              <span class=\"task-add-button__label\">" << add_label << "</span>\n";
+    html << "            </summary>\n";
+    html << "            <div class=\"task-create-menu\" role=\"menu\" aria-label=\"" << create_item_label
+         << "\">\n";
+    html << "              <p class=\"task-create-menu__title\">" << create_item_label << "</p>\n";
+    html << "              <a class=\"task-create-menu__item\" role=\"menuitem\" data-create=\"task\""
+         << " href=\"#\">" << new_task_label << "</a>\n";
+    html << "              <a class=\"task-create-menu__item\" role=\"menuitem\" data-create=\"shopping-list\""
+         << " href=\"#\">" << new_shopping_list_label << "</a>\n";
+    html << "              <a class=\"task-create-menu__item\" role=\"menuitem\" data-create=\"appointment\""
+         << " href=\"#\">" << new_appointment_label << "</a>\n";
+    html << "            </div>\n";
+    html << "          </details>\n";
+    html << "          <nav class=\"lang-toggle\" role=\"group\" aria-label=\"" << language_label
+         << "\">\n";
+    html << language_toggle_button("FR", beavertask_french_href, switch_to_french,
+                                   language == Language::French);
+    html << language_toggle_button("EN", beavertask_english_href, switch_to_english,
+                                   language == Language::English);
+    html << "          </nav>\n";
+    html << "        </div>\n";
+    html << "      </header>\n";
+    html << "      <main class=\"task-board\" aria-live=\"polite\">\n";
+
+    for (std::size_t index = 0; index < tasks.size(); ++index) {
+        const TaskDefinition& task = tasks[index];
+        const auto [priority_key, priority_text] = priority_label_for(task.priority);
+        std::string status_text = status_text_for_key(task.status_key);
+        std::string task_id = "task-" + std::to_string(index + 1);
+
+        std::vector<const TaskLinkDefinition*> web_links;
+        std::vector<const TaskLinkDefinition*> local_links;
+        web_links.reserve(task.links.size());
+        local_links.reserve(task.links.size());
+        for (const auto& link : task.links) {
+            const TaskLinkType link_type = classify_link(link.href);
+            if (link_type == TaskLinkType::kWeb) {
+                web_links.push_back(&link);
+            } else {
+                local_links.push_back(&link);
+            }
+        }
+
+        html << "        <article class=\"task-card task-card--priority-" << priority_key
+             << "\" data-priority=\"" << priority_key << "\" data-status=\""
+             << html_escape(task.status_key) << "\">\n";
+        html << "          <header class=\"task-card__header\">\n";
+        html << "            <span class=\"task-card__category\">" << category_label(task.category)
+             << "</span>\n";
+        html << "            <h2 class=\"task-card__title\" id=\"" << task_id << "\">"
+             << html_escape(choose(task.title)) << "</h2>\n";
+        html << "          </header>\n";
+        html << "          <dl class=\"task-card__meta\" aria-describedby=\"" << task_id
+             << "\">\n";
+        html << "            <div class=\"task-card__meta-row\">\n";
+        html << "              <dt>" << task_type_label << "</dt>\n";
+        html << "              <dd>" << category_label(task.category) << "</dd>\n";
+        html << "            </div>\n";
+        html << "            <div class=\"task-card__meta-row\">\n";
+        html << "              <dt>" << priority_label << "</dt>\n";
+        html << "              <dd><span class=\"task-card__priority\">" << priority_text
+             << "</span></dd>\n";
+        html << "            </div>\n";
+        html << "            <div class=\"task-card__meta-row\">\n";
+        html << "              <dt>" << due_label << "</dt>\n";
+        html << "              <dd>" << html_escape(choose(task.due)) << "</dd>\n";
+        html << "            </div>\n";
+        html << "            <div class=\"task-card__meta-row\">\n";
+        html << "              <dt>" << assignee_label << "</dt>\n";
+        html << "              <dd>" << html_escape(choose(task.assignee)) << "</dd>\n";
+        html << "            </div>\n";
+        html << "            <div class=\"task-card__meta-row\">\n";
+        html << "              <dt>" << status_label << "</dt>\n";
+        html << "              <dd>" << status_text << "</dd>\n";
+        html << "            </div>\n";
+        html << "          </dl>\n";
+
+        if (!task.tags.empty()) {
+            html << "          <ul class=\"task-card__tags\">\n";
+            for (const auto& tag : task.tags) {
+                html << "            <li class=\"task-card__tag\">" << html_escape(choose(tag))
+                     << "</li>\n";
+            }
+            html << "          </ul>\n";
+        }
+
+        if (!task.checklist.empty()) {
+            html << "          <section class=\"task-card__checklist\" aria-label=\""
+                 << checklist_label << "\">\n";
+            html << "            <h3 class=\"task-card__section-title\">" << checklist_label
+                 << "</h3>\n";
+            html << "            <ul class=\"task-checklist\">\n";
+            for (const auto& item : task.checklist) {
+                html << "              <li class=\"task-checklist__item";
+                if (item.completed) {
+                    html << " task-checklist__item--completed";
+                }
+                html << "\" data-complete=\"" << (item.completed ? "true" : "false")
+                     << "\">\n";
+                html << "                <span class=\"task-checklist__marker\" aria-hidden=\"true\"></span>\n";
+                html << "                <span class=\"task-checklist__label\">"
+                     << html_escape(choose(item.label)) << "</span>\n";
+                html << "              </li>\n";
+            }
+            html << "            </ul>\n";
+            html << "          </section>\n";
+        }
+
+        std::string notes_text = choose(task.notes);
+        if (!notes_text.empty()) {
+            html << "          <section class=\"task-card__notes\">\n";
+            html << "            <h3 class=\"task-card__section-title\">" << notes_label
+                 << "</h3>\n";
+            html << "            <p class=\"task-card__note-text\">"
+                 << html_escape(notes_text) << "</p>\n";
+            html << "          </section>\n";
+        }
+
+        const auto render_links = [&](const std::vector<const TaskLinkDefinition*>& links,
+                                      const std::string& heading, TaskLinkType type) {
+            if (links.empty()) {
+                return;
+            }
+
+            const char* type_class = (type == TaskLinkType::kWeb) ? "web" : "local";
+            html << "          <section class=\"task-card__links\">\n";
+            html << "            <h3 class=\"task-card__section-title\">" << heading << "</h3>\n";
+            html << "            <div class=\"task-links\">\n";
+            for (const auto* link : links) {
+                html << "              <a class=\"task-link task-link--" << type_class
+                     << "\" data-link-type=\"" << type_class << "\" href=\""
+                     << html_escape(link->href) << "\"";
+                if (type == TaskLinkType::kWeb) {
+                    html << " target=\"_blank\" rel=\"noopener\"";
+                }
+                html << ">" << html_escape(choose(link->label)) << "</a>\n";
+            }
+            html << "            </div>\n";
+            html << "          </section>\n";
+        };
+
+        render_links(web_links, web_links_label, TaskLinkType::kWeb);
+        render_links(local_links, local_links_label, TaskLinkType::kLocal);
+
+        html << "        </article>\n";
+    }
+
+    html << "      </main>\n";
+    html << "    </div>\n";
+    html << "  </div>\n";
+    html << "</body>\n";
+    html << "</html>\n";
+
+    return html.str();
+}
 
 std::string generate_beaverphone_dialpad_html(const TranslationCatalog& translations,
                                               Language language,
