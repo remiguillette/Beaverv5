@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -13,6 +14,7 @@
 #include <JavaScriptCore/JavaScript.h>
 #endif
 #include <gdk/gdk.h>
+#include <gio/gio.h>
 #include <glib.h>
 
 #include "core/cctv_config.h"
@@ -605,18 +607,16 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
         handled_navigation = true;
     } else if (navigating_to_beaveralarm) {
+        bool allow_navigation = true;
 #if defined(HAVE_GSTREAMER)
-        self->set_camera_active(true);
+        allow_navigation = self->prepare_camera_navigation(language);
 #endif
-        std::string html = self->manager_.beaveralarm_page_html(
-            language, BeaverAlarmMenuLinkMode::kRelativeIndex);
-        std::string base_uri = build_base_uri();
-        if (html.empty()) {
-            g_warning("GtkApp received empty BeaverAlarm HTML for language: %s",
-                      language_to_string(language));
+        if (!allow_navigation) {
+            handled_navigation = true;
+        } else {
+            self->load_beaveralarm_page(web_view, language);
+            handled_navigation = true;
         }
-        webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
-        handled_navigation = true;
     } else if (navigating_to_beaversystem) {
 #if defined(HAVE_GSTREAMER)
         self->set_camera_active(false);
@@ -706,6 +706,23 @@ void GtkApp::load_language(WebKitWebView* web_view, Language language) {
     manager_.clear_navigation_history();
     remove_remote_navigation_controls(web_view);
     webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+}
+
+void GtkApp::load_beaveralarm_page(WebKitWebView* web_view, Language language) {
+    if (web_view == nullptr) {
+        g_warning("GtkApp cannot load BeaverAlarm page without an active web view.");
+        return;
+    }
+
+    std::string html = manager_.beaveralarm_page_html(
+        language, "", BeaverAlarmMenuLinkMode::kRelativeIndex);
+    std::string base_uri = build_base_uri();
+    if (html.empty()) {
+        g_warning("GtkApp received empty BeaverAlarm HTML for language: %s",
+                  language_to_string(language));
+    }
+    webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
+    current_camera_language_ = language;
 }
 
 void GtkApp::ensure_remote_navigation_controls(WebKitWebView* web_view) {
@@ -851,6 +868,13 @@ void GtkApp::set_camera_active(bool active) {
 #if defined(HAVE_GSTREAMER)
     camera_requested_active_ = active;
     if (active) {
+        cancel_camera_retry_timeout();
+        camera_retry_attempts_ = 0;
+    } else {
+        pending_camera_navigation_ = false;
+        cancel_camera_retry_timeout();
+    }
+    if (active) {
         start_camera_pipeline();
     } else {
         stop_camera_pipeline();
@@ -863,6 +887,36 @@ void GtkApp::set_camera_active(bool active) {
 #if defined(HAVE_GSTREAMER)
 
 namespace {
+bool is_port_open(const std::string& host, int port, int timeout_ms = 400) {
+    if (host.empty() || port <= 0 || port > 65535) {
+        return false;
+    }
+
+    GSocketClient* client = g_socket_client_new();
+    if (client == nullptr) {
+        return false;
+    }
+
+    const guint timeout_seconds =
+        timeout_ms <= 0 ? 0u : std::max(1u, static_cast<guint>((timeout_ms + 999) / 1000));
+    g_socket_client_set_timeout(client, timeout_seconds);
+
+    GError* error = nullptr;
+    GSocketConnection* connection =
+        g_socket_client_connect_to_host(client, host.c_str(), port, nullptr, &error);
+    const bool ok = (connection != nullptr);
+
+    if (connection != nullptr) {
+        g_object_unref(connection);
+    }
+    if (error != nullptr) {
+        g_clear_error(&error);
+    }
+
+    g_object_unref(client);
+    return ok;
+}
+
 constexpr const int kCameraOverlayMargin = 24;
 constexpr const int kCameraOverlaySpacing = 8;
 constexpr const int kCameraMinimumWidth = 640;
@@ -935,7 +989,22 @@ void GtkApp::ensure_camera_overlay() {
 #else
     gtk_box_pack_start(GTK_BOX(container), camera_status_label_, FALSE, FALSE, 0);
 #endif
+
+    if (camera_retry_button_ == nullptr) {
+        camera_retry_button_ = gtk_button_new_with_label("Retry");
+        g_signal_connect(camera_retry_button_, "clicked",
+                         G_CALLBACK(GtkApp::on_camera_retry_clicked), this);
+#if GTK_MAJOR_VERSION >= 4
+        gtk_box_append(GTK_BOX(container), camera_retry_button_);
+#else
+        gtk_box_pack_start(GTK_BOX(container), camera_retry_button_, FALSE, FALSE, 0);
+#endif
+    }
+
     set_widget_visible(camera_status_label_, true);
+    if (camera_retry_button_ != nullptr) {
+        set_widget_visible(camera_retry_button_, false);
+    }
     set_widget_visible(frame, false);
 }
 
@@ -956,6 +1025,170 @@ void GtkApp::set_camera_status(const std::string& message) {
     }
     gtk_label_set_text(GTK_LABEL(camera_status_label_), message.c_str());
     set_widget_visible(camera_status_label_, true);
+}
+
+void GtkApp::show_camera_overlay_message(const std::string& message, bool show_retry_button) {
+    ensure_camera_overlay();
+    set_camera_status(message);
+    if (camera_frame_ != nullptr) {
+        set_widget_visible(camera_frame_, true);
+    }
+    if (camera_overlay_ != nullptr) {
+        set_widget_visible(camera_overlay_, true);
+    }
+    if (camera_retry_button_ != nullptr) {
+        set_widget_visible(camera_retry_button_, show_retry_button);
+        gtk_widget_set_sensitive(camera_retry_button_, TRUE);
+    }
+}
+
+bool GtkApp::camera_proxy_available(const CctvConfig& config) const {
+    if (config.mjpeg_stream_url.empty()) {
+        return true;
+    }
+
+    GError* error = nullptr;
+    GUri* uri = g_uri_parse(config.mjpeg_stream_url.c_str(), G_URI_FLAGS_NONE, &error);
+    if (uri == nullptr) {
+        if (error != nullptr) {
+            g_message("GtkApp could not parse CCTV MJPEG stream URI: %s", error->message);
+            g_clear_error(&error);
+        }
+        return true;
+    }
+
+    const gchar* host = g_uri_get_host(uri);
+    int port = g_uri_get_port(uri);
+    if (port <= 0) {
+        const gchar* scheme = g_uri_get_scheme(uri);
+        if (scheme != nullptr && g_ascii_strcasecmp(scheme, "https") == 0) {
+            port = 443;
+        } else {
+            port = 80;
+        }
+    }
+
+    std::string host_string = host != nullptr ? host : "";
+    if (host_string.empty()) {
+        g_uri_unref(uri);
+        return true;
+    }
+
+    if (host_string == "localhost") {
+        host_string = "127.0.0.1";
+    }
+
+    const bool available = is_port_open(host_string, port);
+    g_uri_unref(uri);
+    return available;
+}
+
+void GtkApp::cancel_camera_retry_timeout() {
+    if (camera_retry_timeout_id_ != 0) {
+        g_source_remove(camera_retry_timeout_id_);
+        camera_retry_timeout_id_ = 0;
+    }
+}
+
+void GtkApp::schedule_camera_retry(unsigned int delay_seconds) {
+    cancel_camera_retry_timeout();
+    const guint clamped_delay = std::max(1u, std::min(delay_seconds, 5u));
+    camera_retry_timeout_id_ =
+        g_timeout_add_seconds(clamped_delay, GtkApp::on_camera_retry_timeout, this);
+}
+
+void GtkApp::attempt_camera_reconnect() {
+    cancel_camera_retry_timeout();
+
+    const CctvConfig config = load_cctv_config_from_env();
+    if (!camera_proxy_available(config)) {
+        ++camera_retry_attempts_;
+        const unsigned int next_delay = std::min(5u, 2u + camera_retry_attempts_);
+        std::ostringstream status;
+        status << "Camera proxy unavailable (connection refused). Retrying in " << next_delay
+               << "s…";
+        show_camera_overlay_message(status.str(), true);
+        schedule_camera_retry(next_delay);
+        return;
+    }
+
+    camera_retry_attempts_ = 0;
+    if (camera_retry_button_ != nullptr) {
+        set_widget_visible(camera_retry_button_, false);
+    }
+
+    if (pending_camera_navigation_) {
+        pending_camera_navigation_ = false;
+        camera_requested_active_ = true;
+        start_camera_pipeline();
+        if (web_view_ != nullptr) {
+            load_beaveralarm_page(web_view_, pending_camera_language_);
+        }
+        return;
+    }
+
+    if (camera_requested_active_) {
+        start_camera_pipeline();
+    } else {
+        set_camera_status("");
+        if (camera_overlay_ != nullptr) {
+            set_widget_visible(camera_overlay_, false);
+        }
+        if (camera_frame_ != nullptr) {
+            set_widget_visible(camera_frame_, false);
+        }
+    }
+}
+
+gboolean GtkApp::on_camera_retry_timeout(gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr) {
+        return G_SOURCE_REMOVE;
+    }
+    self->camera_retry_timeout_id_ = 0;
+    self->attempt_camera_reconnect();
+    return G_SOURCE_REMOVE;
+}
+
+void GtkApp::on_camera_retry_clicked(GtkButton* button, gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr) {
+        return;
+    }
+    if (button != nullptr) {
+        gtk_widget_set_sensitive(GTK_WIDGET(button), FALSE);
+    }
+    self->attempt_camera_reconnect();
+}
+
+bool GtkApp::prepare_camera_navigation(Language language) {
+    pending_camera_language_ = language;
+    pending_camera_navigation_ = false;
+    cancel_camera_retry_timeout();
+    camera_retry_attempts_ = 0;
+    ensure_gstreamer_initialized();
+
+    const CctvConfig config = load_cctv_config_from_env();
+    if (!camera_proxy_available(config)) {
+        g_message("GtkApp delaying BeaverAlarm navigation: CCTV proxy not ready.");
+        begin_camera_proxy_wait(language);
+        return false;
+    }
+
+    camera_requested_active_ = true;
+    start_camera_pipeline();
+    return true;
+}
+
+void GtkApp::begin_camera_proxy_wait(Language language) {
+    pending_camera_navigation_ = true;
+    pending_camera_language_ = language;
+    camera_requested_active_ = false;
+    stop_camera_pipeline();
+    g_message("GtkApp waiting for CCTV proxy on port 8090 before launching BeaverAlarm.");
+    show_camera_overlay_message("Camera initialization… waiting for stream proxy.", true);
+    camera_retry_attempts_ = 0;
+    schedule_camera_retry(2);
 }
 
 GstElement* GtkApp::create_camera_sink() {
@@ -1174,24 +1407,52 @@ void GtkApp::on_camera_bus_error(GstBus* /*bus*/, GstMessage* message, gpointer 
         g_message("GtkApp CCTV pipeline debug: %s", debug);
     }
 
+    const auto contains_connection_refused = [](const char* text) {
+        if (text == nullptr) {
+            return false;
+        }
+        std::string lower;
+        lower.reserve(std::strlen(text));
+        for (const char* ptr = text; *ptr != '\0'; ++ptr) {
+            lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(*ptr))));
+        }
+        return lower.find("connection refused") != std::string::npos;
+    };
+
+    bool connection_refused = false;
     if (error != nullptr) {
-        g_error_free(error);
+        if (error->domain == G_IO_ERROR && error->code == G_IO_ERROR_CONNECTION_REFUSED) {
+            connection_refused = true;
+        } else if (error->message != nullptr) {
+            connection_refused = contains_connection_refused(error->message);
+        }
+    }
+    if (!connection_refused && debug != nullptr) {
+        connection_refused = contains_connection_refused(debug);
+    }
+
+    if (error != nullptr) {
+        g_clear_error(&error);
     }
     if (debug != nullptr) {
         g_free(debug);
     }
 
-    self->set_camera_status("Camera feed error. Reconnecting…");
     self->stop_camera_pipeline();
 
+    if (connection_refused) {
+        self->camera_retry_attempts_ = 0;
+        self->show_camera_overlay_message(
+            "Stream unavailable (connection refused) — please try again.", true);
+        if (self->camera_requested_active_ || self->pending_camera_navigation_) {
+            self->schedule_camera_retry(2);
+        }
+        return;
+    }
+
+    self->show_camera_overlay_message("Camera feed error. Reconnecting…", false);
     if (self->camera_requested_active_) {
-        g_timeout_add_seconds(2, [](gpointer data) -> gboolean {
-            auto* app = static_cast<GtkApp*>(data);
-            if (app != nullptr && app->camera_requested_active_) {
-                app->start_camera_pipeline();
-            }
-            return G_SOURCE_REMOVE;
-        }, self);
+        self->schedule_camera_retry(2);
     }
 }
 
