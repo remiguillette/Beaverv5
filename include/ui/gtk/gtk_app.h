@@ -34,7 +34,6 @@ private:
     void build_ui(GtkApplication* application);
     void load_language(WebKitWebView* web_view, Language language);
     void load_beaveralarm_page(WebKitWebView* web_view, Language language);
-    void load_beavertask_page(WebKitWebView* web_view, Language language);
     void ensure_remote_navigation_controls(WebKitWebView* web_view);
     void remove_remote_navigation_controls(WebKitWebView* web_view);
     void handle_remote_go_home();
