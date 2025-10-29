@@ -27,6 +27,3 @@ std::string generate_beaversystem_dashboard_html(
     const TranslationCatalog& translations, Language language, const std::string& asset_prefix = "",
     BeaverSystemMenuLinkMode menu_link_mode = BeaverSystemMenuLinkMode::kAbsoluteRoot,
     const SystemStatusSnapshot& snapshot = SystemStatusSnapshot{});
-std::string generate_beavertask_planner_html(
-    const TranslationCatalog& translations, Language language, const std::string& asset_prefix = "",
-    BeaverTaskMenuLinkMode menu_link_mode = BeaverTaskMenuLinkMode::kAbsoluteRoot);
