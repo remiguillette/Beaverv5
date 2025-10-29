@@ -15,12 +15,24 @@
 #include <gdk/gdk.h>
 #include <glib.h>
 
+#include "core/cctv_config.h"
+
+#if defined(HAVE_GSTREAMER)
+#include <gst/gst.h>
+#endif
+
 GtkApp::GtkApp(AppManager& manager) : manager_(manager) {}
 
 int GtkApp::run(int argc, char** argv) {
+#if defined(HAVE_GSTREAMER)
+    ensure_gstreamer_initialized();
+#endif
     GtkApplication* application =
         gtk_application_new("com.beaver.kiosk", G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(application, "activate", G_CALLBACK(GtkApp::on_activate), this);
+#if defined(HAVE_GSTREAMER)
+    g_signal_connect(application, "shutdown", G_CALLBACK(GtkApp::on_application_shutdown), this);
+#endif
 
     int status = g_application_run(G_APPLICATION(application), argc, argv);
     g_object_unref(application);
@@ -199,6 +211,21 @@ std::string strip_trailing_slashes(std::string path) {
         path.resize(new_size);
     }
     return path;
+}
+
+void set_widget_visible(GtkWidget* widget, bool visible) {
+    if (widget == nullptr) {
+        return;
+    }
+#if GTK_MAJOR_VERSION >= 4
+    gtk_widget_set_visible(widget, visible);
+#else
+    if (visible) {
+        gtk_widget_show(widget);
+    } else {
+        gtk_widget_hide(widget);
+    }
+#endif
 }
 
 std::string normalize_navigation_path(const std::string& path) {
@@ -446,10 +473,18 @@ void GtkApp::build_ui(GtkApplication* application) {
 #if defined(WEBKIT_CONSOLE_MESSAGE_LEVEL_INFO)
     g_signal_connect(webview, "console-message-sent", G_CALLBACK(GtkApp::on_console_message), this);
 #endif
+    GtkWidget* overlay = gtk_overlay_new();
+    overlay_root_ = overlay;
 #if GTK_MAJOR_VERSION >= 4
-    gtk_window_set_child(GTK_WINDOW(window), webview);
+    gtk_overlay_set_child(GTK_OVERLAY(overlay), webview);
+    gtk_window_set_child(GTK_WINDOW(window), overlay);
 #else
-    gtk_container_add(GTK_CONTAINER(window), webview);
+    gtk_container_add(GTK_CONTAINER(overlay), webview);
+    gtk_container_add(GTK_CONTAINER(window), overlay);
+#endif
+
+#if defined(HAVE_GSTREAMER)
+    ensure_camera_overlay();
 #endif
 
     Language initial_language = manager_.get_default_language();
@@ -552,6 +587,9 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         self->load_language(web_view, language);
         handled_navigation = true;
     } else if (navigating_to_beaverphone) {
+#if defined(HAVE_GSTREAMER)
+        self->set_camera_active(false);
+#endif
         std::string html = self->manager_.beaverphone_page_html(
             language, BeaverphoneMenuLinkMode::kRelativeIndex);
         std::string base_uri = build_base_uri();
@@ -562,6 +600,9 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
         handled_navigation = true;
     } else if (navigating_to_beaveralarm) {
+#if defined(HAVE_GSTREAMER)
+        self->set_camera_active(true);
+#endif
         std::string html = self->manager_.beaveralarm_page_html(
             language, BeaverAlarmMenuLinkMode::kRelativeIndex);
         std::string base_uri = build_base_uri();
@@ -572,6 +613,9 @@ gboolean GtkApp::on_decide_policy(WebKitWebView* web_view, WebKitPolicyDecision*
         webkit_web_view_load_html(web_view, html.c_str(), base_uri.c_str());
         handled_navigation = true;
     } else if (navigating_to_beaversystem) {
+#if defined(HAVE_GSTREAMER)
+        self->set_camera_active(false);
+#endif
         std::string html = self->manager_.beaversystem_page_html(
             language, BeaverSystemMenuLinkMode::kRelativeIndex);
         std::string base_uri = build_base_uri();
@@ -645,6 +689,9 @@ gboolean GtkApp::on_console_message(WebKitWebView* /*web_view*/,
 }
 
 void GtkApp::load_language(WebKitWebView* web_view, Language language) {
+#if defined(HAVE_GSTREAMER)
+    set_camera_active(false);
+#endif
     std::string html = manager_.to_html(language, MenuRouteMode::kKiosk);
     std::string base_uri = build_base_uri();
     if (html.empty()) {
@@ -692,6 +739,9 @@ void GtkApp::handle_remote_go_home() {
     }
 
     g_message("GtkApp received remote go-home request. Returning to kiosk menu.");
+#if defined(HAVE_GSTREAMER)
+    set_camera_active(false);
+#endif
     load_language(web_view_, manager_.get_default_language());
 }
 
@@ -791,3 +841,366 @@ void GtkApp::on_script_message_received(WebKitUserContentManager* /*content_mana
         self->handle_remote_go_home();
     }
 }
+
+void GtkApp::set_camera_active(bool active) {
+#if defined(HAVE_GSTREAMER)
+    camera_requested_active_ = active;
+    if (active) {
+        start_camera_pipeline();
+    } else {
+        stop_camera_pipeline();
+    }
+#else
+    (void)active;
+#endif
+}
+
+#if defined(HAVE_GSTREAMER)
+
+namespace {
+constexpr const int kCameraOverlayMargin = 24;
+constexpr const int kCameraOverlaySpacing = 8;
+constexpr const int kCameraMinimumWidth = 640;
+constexpr const int kCameraMinimumHeight = 360;
+}  // namespace
+
+void GtkApp::ensure_gstreamer_initialized() {
+    if (gstreamer_initialized_) {
+        return;
+    }
+    gst_init(nullptr, nullptr);
+    gstreamer_initialized_ = true;
+}
+
+void GtkApp::ensure_camera_overlay() {
+    if (overlay_root_ == nullptr || camera_overlay_ != nullptr) {
+        return;
+    }
+
+    GtkWidget* container = gtk_box_new(GTK_ORIENTATION_VERTICAL, kCameraOverlaySpacing);
+    camera_overlay_ = container;
+    gtk_widget_set_hexpand(container, FALSE);
+    gtk_widget_set_vexpand(container, FALSE);
+    gtk_widget_set_halign(container, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(container, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_start(container, kCameraOverlayMargin);
+    gtk_widget_set_margin_end(container, kCameraOverlayMargin);
+    gtk_widget_set_margin_top(container, kCameraOverlayMargin);
+    gtk_widget_set_margin_bottom(container, kCameraOverlayMargin);
+    gtk_widget_set_size_request(container, kCameraMinimumWidth, kCameraMinimumHeight);
+
+    GtkWidget* frame = gtk_frame_new(nullptr);
+    camera_frame_ = frame;
+    gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
+#if GTK_MAJOR_VERSION >= 4
+    gtk_overlay_add_overlay(GTK_OVERLAY(overlay_root_), frame);
+    gtk_frame_set_child(GTK_FRAME(frame), container);
+#else
+    gtk_overlay_add_overlay(GTK_OVERLAY(overlay_root_), frame);
+    gtk_container_add(GTK_CONTAINER(frame), container);
+#endif
+
+    camera_status_label_ = gtk_label_new("Connecting to CCTV feed…");
+    gtk_label_set_xalign(GTK_LABEL(camera_status_label_), 0.0f);
+    gtk_label_set_wrap(GTK_LABEL(camera_status_label_), TRUE);
+#if GTK_MAJOR_VERSION >= 4
+    gtk_box_append(GTK_BOX(container), camera_status_label_);
+#else
+    gtk_box_pack_start(GTK_BOX(container), camera_status_label_, FALSE, FALSE, 0);
+#endif
+    set_widget_visible(camera_status_label_, true);
+    set_widget_visible(frame, false);
+}
+
+void GtkApp::set_camera_status(const std::string& message) {
+    if (camera_status_label_ == nullptr) {
+        return;
+    }
+    if (message.empty()) {
+        gtk_label_set_text(GTK_LABEL(camera_status_label_), "");
+        set_widget_visible(camera_status_label_, false);
+        return;
+    }
+    gtk_label_set_text(GTK_LABEL(camera_status_label_), message.c_str());
+    set_widget_visible(camera_status_label_, true);
+}
+
+GstElement* GtkApp::create_camera_sink() {
+    const char* const candidates[] = {"gtksink", "gtkglsink", "autovideosink", nullptr};
+    for (const char* const* name = candidates; *name != nullptr; ++name) {
+        GstElement* sink = gst_element_factory_make(*name, "beaver-camera-sink");
+        if (sink != nullptr) {
+            g_message("GtkApp using %s for CCTV pipeline video sink.", *name);
+            return sink;
+        }
+    }
+    g_warning("GtkApp could not create a GTK-compatible video sink. CCTV feed disabled.");
+    return nullptr;
+}
+
+void GtkApp::attach_camera_widget_from_sink(GstElement* sink) {
+    if (sink == nullptr || camera_overlay_ == nullptr) {
+        return;
+    }
+
+    if (camera_video_widget_ != nullptr) {
+        return;
+    }
+
+    if (!g_object_class_find_property(G_OBJECT_GET_CLASS(sink), "widget")) {
+        return;
+    }
+
+    GtkWidget* widget = nullptr;
+    g_object_get(sink, "widget", &widget, nullptr);
+    if (widget == nullptr) {
+        return;
+    }
+
+    gtk_widget_set_hexpand(widget, TRUE);
+    gtk_widget_set_vexpand(widget, TRUE);
+#if GTK_MAJOR_VERSION >= 4
+    gtk_box_append(GTK_BOX(camera_overlay_), widget);
+#else
+    gtk_box_pack_start(GTK_BOX(camera_overlay_), widget, TRUE, TRUE, 0);
+#endif
+    camera_video_widget_ = widget;
+    set_widget_visible(camera_status_label_, true);
+}
+
+void GtkApp::attach_camera_bus() {
+    if (camera_pipeline_ == nullptr) {
+        return;
+    }
+    GstBus* bus = gst_element_get_bus(camera_pipeline_);
+    if (bus == nullptr) {
+        return;
+    }
+    gst_bus_add_signal_watch(bus);
+    g_signal_connect(bus, "message::error", G_CALLBACK(GtkApp::on_camera_bus_error), this);
+    g_signal_connect(bus, "message::eos", G_CALLBACK(GtkApp::on_camera_bus_eos), this);
+    g_signal_connect(bus, "message::state-changed", G_CALLBACK(GtkApp::on_camera_bus_state_changed), this);
+    gst_object_unref(bus);
+}
+
+void GtkApp::detach_camera_bus() {
+    if (camera_pipeline_ == nullptr) {
+        return;
+    }
+    GstBus* bus = gst_element_get_bus(camera_pipeline_);
+    if (bus == nullptr) {
+        return;
+    }
+    g_signal_handlers_disconnect_by_data(bus, this);
+    gst_bus_remove_signal_watch(bus);
+    gst_object_unref(bus);
+}
+
+void GtkApp::start_camera_pipeline() {
+    if (!camera_requested_active_) {
+        return;
+    }
+    ensure_gstreamer_initialized();
+    ensure_camera_overlay();
+
+    if (camera_overlay_ == nullptr) {
+        g_warning("GtkApp cannot display CCTV feed: overlay not available.");
+        return;
+    }
+
+    if (camera_pipeline_ != nullptr) {
+        if (camera_frame_ != nullptr) {
+            set_widget_visible(camera_frame_, true);
+        }
+        set_widget_visible(camera_overlay_, true);
+        return;
+    }
+
+    CctvConfig config = load_cctv_config_from_env();
+    const std::string uri = config.rtsp_uri(true);
+    if (uri.empty()) {
+        g_warning("GtkApp CCTV configuration missing RTSP URI. Unable to start stream.");
+        set_camera_status("Camera feed unavailable.");
+        if (camera_frame_ != nullptr) {
+            set_widget_visible(camera_frame_, true);
+        }
+        set_widget_visible(camera_overlay_, true);
+        return;
+    }
+
+    set_camera_status("Connecting to CCTV feed…");
+
+    GstElement* pipeline = gst_element_factory_make("playbin", "beaver-camera-playbin");
+    if (pipeline == nullptr) {
+        g_warning("GtkApp failed to create playbin pipeline for CCTV feed.");
+        set_camera_status("Unable to create CCTV pipeline.");
+        if (camera_frame_ != nullptr) {
+            set_widget_visible(camera_frame_, true);
+        }
+        set_widget_visible(camera_overlay_, true);
+        return;
+    }
+
+    GstElement* sink = create_camera_sink();
+    if (sink == nullptr) {
+        gst_object_unref(pipeline);
+        set_camera_status("Missing GTK video sink for CCTV feed.");
+        if (camera_frame_ != nullptr) {
+            set_widget_visible(camera_frame_, true);
+        }
+        set_widget_visible(camera_overlay_, true);
+        return;
+    }
+
+    attach_camera_widget_from_sink(sink);
+    g_object_set(pipeline, "video-sink", sink, nullptr);
+    gst_object_unref(sink);
+
+    g_object_set(pipeline, "uri", uri.c_str(), nullptr);
+
+    camera_pipeline_ = pipeline;
+    attach_camera_bus();
+
+    if (camera_frame_ != nullptr) {
+        set_widget_visible(camera_frame_, true);
+    }
+    set_widget_visible(camera_overlay_, true);
+
+    const GstStateChangeReturn state = gst_element_set_state(camera_pipeline_, GST_STATE_PLAYING);
+    if (state == GST_STATE_CHANGE_FAILURE) {
+        g_warning("GtkApp could not start CCTV pipeline. State change failed.");
+        detach_camera_bus();
+        gst_object_unref(camera_pipeline_);
+        camera_pipeline_ = nullptr;
+        set_camera_status("Unable to start CCTV feed.");
+        if (camera_frame_ != nullptr) {
+            set_widget_visible(camera_frame_, true);
+        }
+        set_widget_visible(camera_overlay_, true);
+        if (camera_video_widget_ != nullptr) {
+#if GTK_MAJOR_VERSION >= 4
+            gtk_box_remove(GTK_BOX(camera_overlay_), camera_video_widget_);
+#else
+            gtk_container_remove(GTK_CONTAINER(camera_overlay_), camera_video_widget_);
+#endif
+            camera_video_widget_ = nullptr;
+        }
+    }
+}
+
+void GtkApp::stop_camera_pipeline() {
+    if (camera_pipeline_ != nullptr) {
+        detach_camera_bus();
+        gst_element_set_state(camera_pipeline_, GST_STATE_NULL);
+        gst_object_unref(camera_pipeline_);
+        camera_pipeline_ = nullptr;
+    }
+
+    if (camera_video_widget_ != nullptr) {
+#if GTK_MAJOR_VERSION >= 4
+        gtk_box_remove(GTK_BOX(camera_overlay_), camera_video_widget_);
+#else
+        gtk_container_remove(GTK_CONTAINER(camera_overlay_), camera_video_widget_);
+#endif
+        camera_video_widget_ = nullptr;
+    }
+
+    if (!camera_requested_active_) {
+        set_camera_status("");
+        if (camera_overlay_ != nullptr) {
+            set_widget_visible(camera_overlay_, false);
+        }
+        if (camera_frame_ != nullptr) {
+            set_widget_visible(camera_frame_, false);
+        }
+    }
+}
+
+void GtkApp::on_application_shutdown(GApplication* /*application*/, gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr) {
+        return;
+    }
+    self->camera_requested_active_ = false;
+    self->stop_camera_pipeline();
+}
+
+void GtkApp::on_camera_bus_error(GstBus* /*bus*/, GstMessage* message, gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr || message == nullptr) {
+        return;
+    }
+
+    GError* error = nullptr;
+    gchar* debug = nullptr;
+    gst_message_parse_error(message, &error, &debug);
+
+    const char* error_message = (error != nullptr && error->message != nullptr) ? error->message : "unknown error";
+    g_warning("GtkApp CCTV pipeline error: %s", error_message);
+    if (debug != nullptr && debug[0] != '\0') {
+        g_message("GtkApp CCTV pipeline debug: %s", debug);
+    }
+
+    if (error != nullptr) {
+        g_error_free(error);
+    }
+    if (debug != nullptr) {
+        g_free(debug);
+    }
+
+    self->set_camera_status("Camera feed error. Reconnecting…");
+    self->stop_camera_pipeline();
+
+    if (self->camera_requested_active_) {
+        g_timeout_add_seconds(2, [](gpointer data) -> gboolean {
+            auto* app = static_cast<GtkApp*>(data);
+            if (app != nullptr && app->camera_requested_active_) {
+                app->start_camera_pipeline();
+            }
+            return G_SOURCE_REMOVE;
+        }, self);
+    }
+}
+
+void GtkApp::on_camera_bus_eos(GstBus* /*bus*/, GstMessage* /*message*/, gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr) {
+        return;
+    }
+    g_message("GtkApp CCTV pipeline received EOS. Restarting stream.");
+    self->set_camera_status("Camera feed ended. Reconnecting…");
+    self->stop_camera_pipeline();
+    if (self->camera_requested_active_) {
+        self->start_camera_pipeline();
+    }
+}
+
+void GtkApp::on_camera_bus_state_changed(GstBus* /*bus*/, GstMessage* message, gpointer user_data) {
+    auto* self = static_cast<GtkApp*>(user_data);
+    if (self == nullptr || message == nullptr) {
+        return;
+    }
+
+    if (GST_MESSAGE_SRC(message) != GST_OBJECT(self->camera_pipeline_)) {
+        return;
+    }
+
+    GstState old_state = GST_STATE_NULL;
+    GstState new_state = GST_STATE_NULL;
+    GstState pending_state = GST_STATE_VOID_PENDING;
+    gst_message_parse_state_changed(message, &old_state, &new_state, &pending_state);
+
+    switch (new_state) {
+        case GST_STATE_READY:
+        case GST_STATE_PAUSED:
+            self->set_camera_status("Connecting to CCTV feed…");
+            break;
+        case GST_STATE_PLAYING:
+            self->set_camera_status("");
+            break;
+        default:
+            break;
+    }
+}
+
+#endif  // defined(HAVE_GSTREAMER)
